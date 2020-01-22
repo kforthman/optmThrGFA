@@ -1,0 +1,1365 @@
+---
+title: "Validation of rGFA functions"
+author: "Hung-Wen Yeh"
+date: "1/8/2020"
+output: 
+  html_document:
+    code_folding: hide
+    highlight: tango
+    theme: cerulean
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 0. Setup
+
+```{r}
+rm(list=ls())
+mydir <- "/Users/hyeh/Dropbox (LIBR)/Henry_Yeh/GFA/rGFA_simu/" # setwd(mydir)
+```
+
+## 0.1 Required packages
+```{r, message=F}
+# library(caret)
+library(GFA)
+opts <- getDefaultOpts()
+opts$convergenceCheck <- T
+# library(doParallel); cl = 10; registerDoParallel(cores=cl)
+library(knitr)
+library(gplots)
+library(ggplot2)
+```
+
+## 0.2 Supporting functions
+
+```{r}
+source(paste0(mydir, "R_scripts/rGFA_simu_fcn.R"))
+```
+
+```{r}
+varIdx.by.block <- list(c(1:15), c(16:25), c(26:30), c(31:40))
+corGrids <- matchGrids <- c(seq(0.1, 0.5, by=0.2), seq(0.6, 0.9, 0.1))
+block.names = paste0("Block_", 1:4)
+block4vars <- c(rep("Block_1", length(varIdx.by.block[[1]])), 
+                rep("Block_2", length(varIdx.by.block[[2]])), 
+                rep("Block_3", length(varIdx.by.block[[3]])), 
+                rep("Block_4", length(varIdx.by.block[[4]])))
+```
+
+# 1. (N,D,K,sd.noise) = (100, 40, 7, 0)
+
+## 1.1. Simulate data
+W matrix:
+```{r}
+# block.names <- paste0("Block_", 1:4)
+set.seed(123)
+W <- matrix(tanh(rnorm(7*40)), 40, 7)
+colnames(W) <- paste0("K", 1:ncol(W))
+rownames(W) <- paste0("V", 1:nrow(W))
+W[c(varIdx.by.block[[2]], varIdx.by.block[[3]]), 2] <-
+  W[c(varIdx.by.block[[1]], varIdx.by.block[[4]]), 3] <- 0
+W[c(varIdx.by.block[[2]], varIdx.by.block[[3]], varIdx.by.block[[4]]), 4] <-
+  W[c(varIdx.by.block[[1]], varIdx.by.block[[3]], varIdx.by.block[[4]]), 5] <-
+  W[c(varIdx.by.block[[1]], varIdx.by.block[[2]], varIdx.by.block[[4]]), 6] <-
+  W[c(varIdx.by.block[[1]], varIdx.by.block[[2]], varIdx.by.block[[3]]), 7] <- 0
+# round(tmp, 1)
+W_heatmap(W_DxK=W, varIdx.by.block, block.names)
+```
+
+X and Y
+```{r}
+folder <- "N100_D40_K7_noise0"
+set.seed(123)
+dat <- data.simu(N=100, W_DxK=W, varIdx.by.block, sd.noise=0)
+names(dat$Y.list) <- block.names
+mynorm <- normalizeData(train=dat$Y.list, type="scaleFeatures")
+Y <- do.call(cbind, mynorm$train)
+```
+
+```{r eval=F}
+veTrue <- rep(NA)
+for(k in 1:7){ 
+  veTrue[k] <- mean(diag(as.matrix(W[, k]) %*% as.matrix(t(W[, k])))) * diag(var(dat$X))[k]
+}
+round(veTrue, 2); sum(veTrue)
+apply(W^2, 2, mean)
+sum(apply(W^2, 2, mean))
+round(apply(dat$X, 2, sd), 2)
+```
+
+## 1.2 Replicate GFA
+```{r eval=F}
+# sapply(mynorm$train, dim); table(unlist(sapply(mynorm$train, function(x) round(apply(x, 2, mean), 1)))); table(unlist(sapply(mynorm$train, function(x) round(apply(x, 2, sd), 1))))
+foreach(r = 1:10, .packages=c("GFA")) %dopar% {
+  set.seed(r)
+  res <- gfa(mynorm$train, opts=opts, K=10)
+  save(res, file=paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+}
+```
+
+With no noise, all 10 replicates converged and returned the correct K=7:
+```{r}
+R <- 10
+rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
+gfaList_full <- list()
+for(r in 1:R){
+  load(paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+  gfaList_full[[r]] <- res
+  rep.summ$conv[r] <- res$conv
+  rep.summ$K[r] <- res$K
+}
+summary(rep.summ$conv)
+table(rep.summ$K)
+# kable(rep.summ, digits=2)
+```
+
+## 1.3 Identify robust factors
+
+Compute replicate- and factor-specific effects
+```{r eval=F}
+R <- 15
+rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
+xw <- list()
+for(r in 1:R){
+  load(paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+  xw[[r]] <- pmXW_by_factor(res)
+  rep.summ$conv[r] <- res$conv
+  rep.summ$K[r] <- res$K
+}
+rep.use <- sort(rep.summ$conv, index.return=T)
+rep.use$ix[1:10]
+xw <- xw[rep.use$ix[1:10]]
+save(xw, file=paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+```
+
+### 1.3.1 Using a list of original GFA objects
+
+```{r eval=F}
+load(paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+tmp <- matrix(rep(NA, length(corGrids)*length(matchGrids)), 
+              nrow = length(corGrids), ncol = length(matchGrids),
+              dimnames = list(corThr=corGrids, matchThr=matchGrids))
+
+match_orig <- list(K.girds = tmp, mse.m = tmp, indices = rep( list(list()), length(corGrids) ))
+
+for(i in 1:length(corGrids)){
+  for (j in 1:length(matchGrids)){
+    # rcomp <- robustComponents(gfaList_full, corThr=corGrids[i], matchThr=matchGrids[j])
+    # save(rcomp, file=paste0(mydir, "res/", folder, "/rComp_corThr", corGrids[i], "_matchThr", matchGrids[j], ".rda"))
+    load(paste0(mydir, "res/", folder, "/rComp_corThr", corGrids[i], "_matchThr", matchGrids[j], ".rda"))
+    match_orig$K.girds[i,j] <- rcomp$Krobust
+    match_orig$indices[[i]][[j]] <- rcomp$indices
+    if(rcomp$Krobust>0){
+      yhat <- apply(rcomp$effect, 1:2, sum, na.rm=T)
+      match_orig$mse.m[i,j] <- mean((yhat - Y)^2)
+    }
+  }
+}
+save(match_orig, file=paste0(mydir, "res/", folder, "/match_orig.rda"))
+```
+
+Summary of the grid search for thresholding parameter combinations:
+```{r}
+load(paste0(mydir, "res/", folder, "/match_orig.rda"))
+
+match_orig$K.girds
+round(match_orig$mse.m, 3)
+paste0("The min. MSE = ", round(min(match_orig$mse.m), 3))
+tmp <- match_orig$K.girds
+tmp[match_orig$mse.m > min(match_orig$mse.m)] <- NA
+tmp[1:2,]
+```
+
+Low corThr values (0.1 and 0.3) perfectly reconstructed the data and led to the true K=7.  The matching indices were all the same 
+```{r}
+all.equal(match_orig$indices[[1]], match_orig$indices[[2]])
+```
+
+The matching indices for the (corThr, matchThr) = (0.3, 0.6) thresholding parameters
+```{r}
+load(paste0(mydir, "res/", folder, "/rComp_corThr0.3_matchThr0.6.rda"))
+rcomp$indices
+```
+
+### 1.3.2. Using a list of posterior means of reconstructed data
+
+```{r eval=F}
+load(paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+system.time(
+  match.mse <- MSE.Grids(
+    Ymtx=Y,                       ## the observed (normalized) data matrix (N x D)
+    maxK = max(rep.summ$K),       ## the maximal K among the GFA replicates
+    comps=xw,                     ## a list of GFA replicates with posterior medians
+    corGrids=corGrids,            ## the grids of corThr values to be assessed
+    matchGrids=matchGrids)        ## the grids of matchThr values to be assessed
+)
+save(match.mse, file=paste0(mydir, "res/", folder, "/MSE_xwList.rda"))
+```
+
+Numbers of matched factors for each (corThr, matchThr) combination:
+```{r}
+load(paste0(mydir, "res/", folder, "/MSE_xwList.rda"))
+match.mse$K.grid
+```
+
+Both criteria matched 7 factors
+```{r}
+opt.par <- optimizeK(K.grids=match.mse$K.grid, mse.array=match.mse$mse$all)
+round(opt.par$mse.m, 3)
+paste0("The min. MSE = ", round(opt.par$mse.min, 3))
+paste0("The 1-SE MSE threshold = ", round(opt.par$mseThr, 3))
+paste0("min. MSE criterion gives ", opt.par$Krobust.min, " matched factors")
+paste0("1-SE MSE criterion gives ", opt.par$Krobust.1se, " matched factors")
+# opt.par_full$par.min
+tmp <- match.mse$K.grids
+tmp[opt.par$mse.m > opt.par$mseThr | tmp != opt.par$Krobust.1se] <- NA
+tmp
+```
+
+
+## 1.4 Agreement between estimated and the true factors
+
+### 1.4.1 Robust factors identified using a list of posterior samples
+
+```{r eval=F}
+gfaList_p50 <- list()
+for (r in 1:R){ 
+  print( system.time(gfaList_p50[[r]] <- psSummary(gfa.res=gfaList_full[[r]], credible.lv=0.95)) )
+}
+save(gfaList_p50, file=paste0(mydir, "res/", folder, "/gfaList_p50.rda.rda"))
+```
+
+```{r}
+load(paste0(mydir, "res/", folder, "/gfaList_p50.rda.rda"))
+rob.ind <- list(indices=match_orig$indices[[1]][[4]])
+ve_full <- rob.var.exp(models=gfaList_p50, indices=rob.ind, block.names=block.names, varIdx.by.block=varIdx.by.block, use.unmatched=T, by.block=T)
+```
+
+```{r}
+tmp <- paste0(round(ve_full$ve.by.block$Mean, 1), ' +/- ', round(ve_full$ve.by.block$SE, 1))
+block.labs <- c("Block_1" = tmp[1], "Block_2" = tmp[2], "Block_3" = tmp[3], "Block_4" = tmp[4])
+    
+p <- ggplot(ve_full$ve.by.block.comp, 
+            aes(x=Component, y=Mean, ymin=Mean-SE, ymax=Mean+SE, color=Block)) +
+  geom_pointrange() +
+  facet_wrap(~ Block, labeller = labeller(Block = block.labs)) +
+  xlab('Robust factors') + ylab('Variance explained (%)') +
+  ggtitle("% variance explained by robust factors in each block")
+p
+```
+
+```{r eval=F}
+rWX_full <- rob_wx(models=gfaList_p50, indices=ve_full$indices, block.labs=block4vars, var.labs=paste0("V", 1:40))
+save(rWX_full, file=paste0(mydir, "res/", folder, "/rWX_full.rda"))
+```
+
+```{r eval=F}
+load(paste0(mydir, "res/", folder, "/rWX_full.rda"))
+gfa_heatmap(robW=rWX_full, block.names=block.names, varIdx.by.block=varIdx.by.block, conf.level=0.95, heatmap.rep=FALSE, factor.order=NULL)
+# ggarrange(w_heatmap.true, w_heatmap.full, nrow=1, ncol=2)
+```
+
+Similarity (correlations) between true factor loadings (rows) and estimated (columns)
+```{r}
+load(paste0(mydir, "res/", folder, "/rWX_full.rda"))
+# dim(rWX_full$w.med)
+sim_true_full <- matrix(NA, ncol(W), ncol(rWX_full$w.med), 
+                        dimnames=list(True=paste0("K", 1:ncol(W)), Matched=paste0("K", 1:ncol(rWX_full$w.med))))
+for (i in 1:ncol(W)){
+  for(j in 1:ncol(rWX_full$w.med)){
+    sim_true_full[i,j] <- cor(W[,i], rWX_full$w.med[,j])
+  }
+}
+```
+
+```{r eval=F}
+heatmap.2(sim_true_full, col=c('cyan','deepskyblue3',"blue",'black','brown','orange',"yellow"), 
+          dendrogram='none', scale="none", 
+          cexRow = 0.8, cexCol=0.8, Colv=F, Rowv=F, density.info="none", trace="none", 
+          srtCol=0,   adjCol = c(0.5,1), symkey = F, 
+          breaks = c(-1.0, -0.8, -0.5, -0.2, 0.2, 0.5, 0.8, 1.0),
+          main="Corr. in W b/w true and estimated (K=7)" )
+```
+
+Factor 3 was matched twice (Matched factor K6 was correlated with true K3 and K5 with r=0.52 and 0.47)
+```{r}
+round(abs(sim_true_full), 2)
+table(apply(abs(sim_true_full), 2, which.max))
+# data.frame(Ture = paste0("K", 1:7), Matched = paste0("K", apply(abs(sim_true_full), 1, which.max)), corr = round(apply(abs(sim_true_full), 1, max), 2) )
+```
+
+### 1.4.2 Robust factors identified using a list of posterior mean of reconstructed data and min-MSE criterion
+These two approaches led to the identical matching indices
+```{r}
+all.equal(match_orig$indices[[1]][[4]], match.mse$indices[[1]][[4]])
+```
+
+### 1.4.2 Robust factors identified using a list of posterior mean of reconstructed data and 1-SE criterion
+
+The matching indices were identical to the previous two approaches
+```{r eval=F}
+all.equal(match.mse$indices[[1]], match.mse$indices[[2]])
+all.equal(match.mse$indices[[1]], match.mse$indices[[3]])
+all.equal(abs(match.mse$indices[[1]][[1]]), abs(match.mse$indices[[3]][[1]]))
+all.equal(match.mse$indices[[3]][[1]], match.mse$indices[[3]][[2]])
+all.equal(match.mse$indices[[3]][[1]], match.mse$indices[[3]][[3]])
+all.equal(match.mse$indices[[3]][[1]], match.mse$indices[[3]][[4]])
+all.equal(match.mse$indices[[3]][[1]], match.mse$indices[[3]][[5]])
+all.equal(match.mse$indices[[3]][[1]], match.mse$indices[[3]][[6]])
+
+for (r in 1:R){
+  tmp <- all.equal(abs(match.mse$indices[[1]][[1]][r,]), abs(match.mse$indices[[3]][[1]][r,]))
+  if(tmp!=TRUE){
+    print(paste0("Indices differed in Replicate ", r))
+  }
+}
+```
+
+```{r eval=F}
+match.mse$indices[[1]][[1]][7,]
+match.mse$indices[[3]][[1]][7,]
+
+load(paste0(mydir, "res/", folder, "/gfaList_p50.rda.rda"))
+rob.ind <- list(indices=match.mse$indices[[1]][[4]])
+ve_full <- rob.var.exp(models=gfaList_p50, indices=rob.ind, block.names=block.names, varIdx.by.block=varIdx.by.block, use.unmatched=T, by.block=T)
+```
+
+# 2. (N,D,K,sd.noise) = (100, 40, 7, 1)
+
+## 2.1. Simulate data
+X and Y
+```{r}
+folder <- "N100_D40_K7_noise1"
+set.seed(123)
+dat <- data.simu(N=100, W_DxK=W, varIdx.by.block, sd.noise=1)
+names(dat$Y.list) <- block.names
+mynorm <- normalizeData(train=dat$Y.list, type="scaleFeatures")
+Y <- do.call(cbind, mynorm$train)
+```
+
+## 2.2 Replicate GFA
+```{r eval=F}
+foreach(r = 1:11, .packages=c("GFA")) %dopar% {
+  set.seed(r)
+  res <- gfa(mynorm$train, opts=opts, K=10)
+  save(res, file=paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+}
+```
+
+With noise SD = 1, 1/11 replicates did not converge and it returned K=8; all other 10 replicates converged and returned the correct K=7 or K=6:
+```{r}
+R <- 11
+rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
+gfaList_full <- list()
+for(r in 1:R){
+  load(paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+  gfaList_full[[r]] <- res
+  rep.summ$conv[r] <- res$conv
+  rep.summ$K[r] <- res$K
+}
+summary(rep.summ$conv)
+table(rep.summ$K)
+rep.summ[rep.summ$conv>0.1,]
+# rep.summ[rep.summ$conv<0.1,]
+gfaList_full <- gfaList_full[-4]
+```
+
+## 2.3 Identify robust factors
+
+### 2.3.1 Using a list of original GFA objects
+
+```{r eval=F}
+tmp <- matrix(rep(NA, length(corGrids)*length(matchGrids)), 
+              nrow = length(corGrids), ncol = length(matchGrids),
+              dimnames = list(corThr=corGrids, matchThr=matchGrids))
+
+match_orig <- list(K.girds = tmp, mse.m = tmp)
+
+for(i in 1:length(corGrids)){
+  for (j in 1:length(matchGrids)){
+    rcomp <- robustComponents(gfaList_full, corThr=corGrids[i], matchThr=matchGrids[j])
+    save(rcomp, file=paste0(mydir, "res/", folder, "/rComp_corThr", corGrids[i], "_matchThr", matchGrids[j], ".rda"))
+    match_orig$K.girds[i,j] <- rcomp$Krobust
+    yhat <- apply(rcomp$effect, 1:2, sum, na.rm=T)
+    match_orig$mse.m[i,j] <- mean((yhat - Y)^2)
+  }
+}
+save(match_orig, file=paste0(mydir, "res/", folder, "/match_orig.rda"))
+```
+
+Despite the 10 replicates returned 6 or 7 factors, the robustComponents() would suggest 8 > 7 (true K) factors: 
+```{r}
+print("Factor numbers for the 10 converged replicates:")
+table(sapply(gfaList_full, `[[`, 11))
+
+load(paste0(mydir, "res/", folder, "/match_orig.rda"))
+match_orig$K.girds
+round(match_orig$mse.m, 3)
+paste0("The min. MSE = ", round(min(match_orig$mse.m), 3))
+tmp <- match_orig$K.girds
+tmp[match_orig$mse.m > min(match_orig$mse.m)] <- NA
+paste0("GFA::robustComponents() suggested ", median(tmp, na.rm=T), " factors")
+```
+
+The matching indices for the (corThr, matchThr) = (0.6, 0.1) thresholding parameters revealed some duplicated factors (e.g. "6: in rep2, 3, 5)
+```{r}
+load(paste0(mydir, "res/", folder, "/rComp_corThr0.6_matchThr0.1.rda"))
+rcomp$indices
+```
+
+### 2.3.2. Using a list of posterior means of reconstructed data
+
+```{r eval=F}
+R <- 11
+rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
+xw <- list()
+for(r in 1:R){
+  load(paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+  xw[[r]] <- pmXW_by_factor(res)
+  rep.summ$conv[r] <- res$conv
+  rep.summ$K[r] <- res$K
+}
+rep.summ[rep.summ$conv>0.1,]
+xw <- xw[-4]
+save(xw, file=paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+```
+
+```{r eval=F}
+load(paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+system.time(
+  match.mse <- MSE.Grids(
+    Ymtx=Y,                       ## the observed (normalized) data matrix (N x D)
+    maxK = max(rep.summ$K),       ## the maximal K among the GFA replicates
+    comps=xw,                     ## a list of GFA replicates with posterior medians
+    corGrids=corGrids,            ## the grids of corThr values to be assessed
+    matchGrids=matchGrids)        ## the grids of matchThr values to be assessed
+)
+save(match.mse, file=paste0(mydir, "res/", folder, "/MSE_xwList.rda"))
+```
+
+Numbers of matched factors for each (corThr, matchThr) combination:
+```{r}
+load(paste0(mydir, "res/", folder, "/MSE_xwList.rda"))
+match.mse$K.grid
+```
+
+Both criteria suggested the correct K=7:
+```{r}
+opt.par <- optimizeK(K.grids=match.mse$K.grid, mse.array=match.mse$mse$all)
+round(opt.par$mse.m, 3)
+paste0("The min. MSE = ", round(opt.par$mse.min, 3))
+paste0("The 1-SE MSE threshold = ", round(opt.par$mseThr, 3))
+paste0("min. MSE criterion gives ", opt.par$Krobust.min, " matched factors")
+paste0("1-SE MSE criterion gives ", opt.par$Krobust.1se, " matched factors")
+```
+
+# 3. (N,D,K,sd.noise) = (100, 40, 7, 2)
+
+## 3.1. Simulate data
+X and Y
+```{r}
+folder <- "N100_D40_K7_noise2"
+set.seed(123)
+dat <- data.simu(N=100, W_DxK=W, varIdx.by.block, sd.noise=2)
+names(dat$Y.list) <- block.names
+mynorm <- normalizeData(train=dat$Y.list, type="scaleFeatures")
+Y <- do.call(cbind, mynorm$train)
+```
+
+## 3.2 Replicate GFA
+```{r eval=F}
+foreach(r = 1:12, .packages=c("GFA")) %dopar% {
+  set.seed(r)
+  res <- gfa(mynorm$train, opts=opts, K=10)
+  save(res, file=paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+}
+```
+
+With noise SD = 2, 2/12 replicates did not converge and they returned K=4 and 3; all other 10 replicates converged but also returned K=3 or 4:
+```{r}
+R <- 12
+rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
+gfaList_full <- list()
+for(r in 1:R){
+  load(paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+  gfaList_full[[r]] <- res
+  rep.summ$conv[r] <- res$conv
+  rep.summ$K[r] <- res$K
+}
+summary(rep.summ$conv)
+table(rep.summ$K)
+rep.summ[rep.summ$conv>0.08,]
+gfaList_full <- gfaList_full[-c(6,7)]
+table(sapply(gfaList_full, `[[`, 11))
+```
+
+# 4. (N,D,K,sd.noise) = (100, 43, 18, 0)
+## 4.1. Simulate data
+W matrix:
+```{r}
+folder <- "N100_D43_K18_noise0"
+load("/Users/hyeh/Dropbox (LIBR)/Henry_Yeh/ABCD/COG_CBCL_SOC_SMA/res/rWX_p50.rda")
+W <- rWX_p50$w.med
+block.names <- c("COG", "CBCL", "SOC", "SMA")
+varIdx.by.block <- list(c(1:13), 13+c(1:11), 13+11+c(1:7), 13+11+7+c(1:12))
+ve <- diag(var(W))
+W <- W[,order(-ve)]
+W_heatmap(W_DxK=W, varIdx.by.block, block.names)
+```
+
+X and Y
+```{r}
+set.seed(123)
+dat <- data.simu(N=100, W_DxK=W, varIdx.by.block, sd.noise=0)
+names(dat$Y.list) <- block.names
+mynorm <- normalizeData(train=dat$Y.list, type="scaleFeatures")
+Y <- do.call(cbind, mynorm$train)
+```
+
+## 4.2 Replicate GFA
+```{r eval=F}
+foreach(r = 1:15, .packages=c("GFA")) %dopar% {
+  set.seed(r)
+  res <- gfa(mynorm$train, opts=opts, K=25)
+  save(res, file=paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+}
+```
+
+With no noise, all 15 replicates converged and most returned the correct K=18:
+```{r}
+R <- 15
+rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
+gfaList_full <- list()
+for(r in 1:R){
+  load(paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+  gfaList_full[[r]] <- res
+  rep.summ$conv[r] <- res$conv
+  rep.summ$K[r] <- res$K
+}
+summary(rep.summ$conv)
+table(rep.summ$K)
+```
+
+Take the 10 replicates with lowest convergence stats
+```{r}
+rep.use <- sort(rep.summ$conv, index.return=T)
+# round(rep.summ$conv[rep.use$ix[1:10]], 3)
+table(rep.summ$K[rep.use$ix[1:10]])
+gfaList_full <- gfaList_full[rep.use$ix[1:10]]
+```
+
+## 4.3 Identify robust factors
+
+### 4.3.1 Using a list of the original GFA objects
+
+```{r eval=F}
+tmp <- matrix(rep(NA, length(corGrids)*length(matchGrids)), 
+              nrow = length(corGrids), ncol = length(matchGrids),
+              dimnames = list(corThr=corGrids, matchThr=matchGrids))
+
+match_orig <- list(K.girds = tmp, mse.m = tmp)
+
+for(i in 1:length(corGrids)){
+  for (j in 1:length(matchGrids)){
+    rcomp <- robustComponents(gfaList_full, corThr=corGrids[i], matchThr=matchGrids[j])
+    save(rcomp, file=paste0(mydir, "res/", folder, "/rComp_corThr", corGrids[i], "_matchThr", matchGrids[j], ".rda"))
+    # load(paste0(mydir, "res/", folder, "rComp_corThr", corGrids[i], "_matchThr", matchGrids[j], ".rda"))
+    match_orig$K.girds[i,j] <- rcomp$Krobust
+    yhat <- apply(rcomp$effect, 1:2, sum, na.rm=T)
+    match_orig$mse.m[i,j] <- mean((yhat - Y)^2)
+  }
+}
+save(match_orig, file=paste0(mydir, "res/", folder, "/match_orig.rda"))
+```
+
+The robustComponents() would suggest correct K=18 factors: 
+```{r}
+load(paste0(mydir, "res/", folder, "/match_orig.rda"))
+
+match_orig$K.girds
+round(match_orig$mse.m, 3)
+paste0("The min. MSE = ", round(min(match_orig$mse.m), 3))
+tmp <- match_orig$K.girds
+tmp[match_orig$mse.m > min(match_orig$mse.m)] <- NA
+tmp[1:2,]
+```
+
+### 4.3.2. Using a list of posterior mean of reconstructed data
+
+```{r eval=F}
+R <- 15
+rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
+xw <- list()
+for(r in 1:R){
+  load(paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+  xw[[r]] <- pmXW_by_factor(res)
+  rep.summ$conv[r] <- res$conv
+  rep.summ$K[r] <- res$K
+}
+rep.use <- sort(rep.summ$conv, index.return=T)
+rep.use$ix[1:10]
+xw <- xw[rep.use$ix[1:10]]
+save(xw, file=paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+```
+
+```{r eval=F}
+load(paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+system.time(
+  match.mse <- MSE.Grids(
+    Ymtx=Y,                       ## the observed (normalized) data matrix (N x D)
+    maxK = max(rep.summ$K),       ## the maximal K among the GFA replicates
+    comps=xw,                     ## a list of GFA replicates with posterior medians
+    corGrids=corGrids,            ## the grids of corThr values to be assessed
+    matchGrids=matchGrids)        ## the grids of matchThr values to be assessed
+)
+save(match.mse, file=paste0(mydir, "res/", folder, "/MSE_xwList.rda"))
+```
+
+Numbers of matched factors for each (corThr, matchThr) combination:
+```{r}
+load(paste0(mydir, "res/", folder, "/MSE_xwList.rda"))
+match.mse$K.grid
+```
+
+Both criteria suggested the correct K=18:
+```{r}
+opt.par <- optimizeK(K.grids=match.mse$K.grid, mse.array=match.mse$mse$all)
+round(opt.par$mse.m, 3)
+paste0("The min. MSE = ", round(opt.par$mse.min, 3))
+paste0("The 1-SE MSE threshold = ", round(opt.par$mseThr, 3))
+paste0("min. MSE criterion gives ", opt.par$Krobust.min, " matched factors")
+paste0("1-SE MSE criterion gives ", opt.par$Krobust.1se, " matched factors")
+```
+
+# 5. (N,D,K,sd.noise) = (100, 43, 18, 0.2)
+## 5.1. Simulate data
+X and Y
+```{r}
+folder <- "N100_D43_K18_noise0.2"
+set.seed(123)
+dat <- data.simu(N=100, W_DxK=W, varIdx.by.block, sd.noise=0.2)
+names(dat$Y.list) <- block.names
+mynorm <- normalizeData(train=dat$Y.list, type="scaleFeatures")
+Y <- do.call(cbind, mynorm$train)
+```
+
+## 5.2 Replicate GFA
+```{r eval=F}
+foreach(r = 1:15, .packages=c("GFA")) %dopar% {
+  set.seed(r)
+  res <- gfa(mynorm$train, opts=opts, K=25)
+  save(res, file=paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+}
+```
+
+With no noise, all 15 replicates converged and most returned the correct K=18:
+```{r}
+R <- 15
+rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
+gfaList_full <- list()
+for(r in 1:R){
+  load(paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+  gfaList_full[[r]] <- res
+  rep.summ$conv[r] <- res$conv
+  rep.summ$K[r] <- res$K
+}
+summary(rep.summ$conv)
+table(rep.summ$K)
+```
+
+Take the 10 replicates with lowest convergence stats
+```{r}
+rep.use <- sort(rep.summ$conv, index.return=T)
+# round(rep.summ$conv[rep.use$ix[1:10]], 3)
+table(rep.summ$K[rep.use$ix[1:10]])
+gfaList_full <- gfaList_full[rep.use$ix[1:10]]
+```
+
+## 5.3 Identify robust factors
+
+### 5.3.1 Using a list of the original GFA objects
+
+```{r eval=F}
+tmp <- matrix(rep(NA, length(corGrids)*length(matchGrids)), 
+              nrow = length(corGrids), ncol = length(matchGrids),
+              dimnames = list(corThr=corGrids, matchThr=matchGrids))
+
+match_orig <- list(K.girds = tmp, mse.m = tmp)
+
+for(i in 1:length(corGrids)){
+  for (j in 1:length(matchGrids)){
+    rcomp <- robustComponents(gfaList_full, corThr=corGrids[i], matchThr=matchGrids[j])
+    save(rcomp, file=paste0(mydir, "res/", folder, "/rComp_corThr", corGrids[i], "_matchThr", matchGrids[j], ".rda"))
+    match_orig$K.girds[i,j] <- rcomp$Krobust
+    yhat <- apply(rcomp$effect, 1:2, sum, na.rm=T)
+    match_orig$mse.m[i,j] <- mean((yhat - Y)^2)
+  }
+}
+save(match_orig, file=paste0(mydir, "res/", folder, "/match_orig.rda"))
+```
+
+The robustComponents() would suggest correct K=18 factors: 
+```{r}
+load(paste0(mydir, "res/", folder, "/match_orig.rda"))
+
+match_orig$K.girds
+round(match_orig$mse.m, 3)
+paste0("The min. MSE = ", round(min(match_orig$mse.m), 3))
+tmp <- match_orig$K.girds
+tmp[match_orig$mse.m > min(match_orig$mse.m)] <- NA
+tmp
+```
+
+### 5.3.2. Using a list of posterior mean of reconstructed data
+
+```{r eval=F}
+R <- 15
+rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
+xw <- list()
+for(r in 1:R){
+  load(paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+  xw[[r]] <- pmXW_by_factor(res)
+  rep.summ$conv[r] <- res$conv
+  rep.summ$K[r] <- res$K
+}
+rep.use <- sort(rep.summ$conv, index.return=T)
+rep.use$ix[1:10]
+xw <- xw[rep.use$ix[1:10]]
+save(xw, file=paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+```
+
+```{r eval=F}
+load(paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+system.time(
+  match.mse <- MSE.Grids(
+    Ymtx=Y,                       ## the observed (normalized) data matrix (N x D)
+    maxK = max(rep.summ$K),       ## the maximal K among the GFA replicates
+    comps=xw,                     ## a list of GFA replicates with posterior medians
+    corGrids=corGrids,            ## the grids of corThr values to be assessed
+    matchGrids=matchGrids)        ## the grids of matchThr values to be assessed
+)
+save(match.mse, file=paste0(mydir, "res/", folder, "/MSE_xwList.rda"))
+```
+
+Numbers of matched factors for each (corThr, matchThr) combination:
+```{r}
+load(paste0(mydir, "res/", folder, "/MSE_xwList.rda"))
+match.mse$K.grid
+```
+
+Min-MSE and 1-SE criteria suggested the correct K=18 and K=16, respectively:
+```{r}
+opt.par <- optimizeK(K.grids=match.mse$K.grid, mse.array=match.mse$mse$all)
+round(opt.par$mse.m, 3)
+paste0("The min. MSE = ", round(opt.par$mse.min, 3))
+paste0("The 1-SE MSE threshold = ", round(opt.par$mseThr, 3))
+paste0("min. MSE criterion gives ", opt.par$Krobust.min, " matched factors")
+paste0("1-SE MSE criterion gives ", opt.par$Krobust.1se, " matched factors")
+```
+
+# 6. (N,D,K,sd.noise) = (100, 43, 37, 0)
+## 6.1. Simulate data
+W matrix:
+```{r}
+folder <- "N100_D43_K37_noise0"
+load("/Users/hyeh/Dropbox (LIBR)/RData/nda18_2.01_COG_CBCL_SOC_SMA4_10.31.2019.RData")
+W <- apply(myres$posterior$W, 2:3, mean)
+rm(myres)
+block.names <- c("COG", "CBCL", "SOC", "SMA")
+varIdx.by.block <- list(c(1:13), 13+c(1:11), 13+11+c(1:7), 13+11+7+c(1:12))
+ve <- diag(var(W))
+W <- W[,order(-ve)]
+W_heatmap(W_DxK=W, varIdx.by.block, block.names)
+```
+
+X and Y
+```{r}
+set.seed(123)
+dat <- data.simu(N=100, W_DxK=W, varIdx.by.block, sd.noise=0)
+names(dat$Y.list) <- block.names
+mynorm <- normalizeData(train=dat$Y.list, type="scaleFeatures")
+Y <- do.call(cbind, mynorm$train)
+```
+
+## 6.2 Replicate GFA
+Set initial K=42 (default is D/2 and will give no more than D=43/2 ~ 22 factors)
+```{r eval=F}
+foreach(r = 1:15, .packages=c("GFA")) %dopar% {
+  set.seed(r)
+  res <- gfa(mynorm$train, opts=opts, K=42)
+  save(res, file=paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+}
+```
+
+Even without noise, 15 replicates returned K from 17 to 20, far from the true K=37.  
+```{r}
+R <- 15
+rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
+gfaList_full <- list()
+for(r in 1:R){
+  load(paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+  gfaList_full[[r]] <- res
+  rep.summ$conv[r] <- res$conv
+  rep.summ$K[r] <- res$K
+}
+plot(rep.summ$conv, rep.summ$K, xlab="Converge statistic", ylab="K")
+rep.summ[rep.summ$conv>0.08,]
+summary(rep.summ$conv)
+table(rep.summ$K)
+```
+
+Take the 10 replicates with lowest convergence stats
+```{r}
+rep.use <- sort(rep.summ$conv, index.return=T)
+# round(rep.summ$conv[rep.use$ix[1:10]], 3)
+table(rep.summ$K[rep.use$ix[1:10]])
+gfaList_full <- gfaList_full[rep.use$ix[1:10]]
+```
+
+## 6.3 Identify robust factors
+
+### 6.3.1 Using a list of the original GFA objects
+
+```{r eval=F}
+tmp <- matrix(rep(NA, length(corGrids)*length(matchGrids)), 
+              nrow = length(corGrids), ncol = length(matchGrids),
+              dimnames = list(corThr=corGrids, matchThr=matchGrids))
+
+match_orig <- list(K.girds = tmp, mse.m = tmp)
+
+for(i in 1:length(corGrids)){
+  for (j in 1:length(matchGrids)){
+    rcomp <- robustComponents(gfaList_full, corThr=corGrids[i], matchThr=matchGrids[j])
+    save(rcomp, file=paste0(mydir, "res/", folder, "/rComp_corThr", corGrids[i], "_matchThr", matchGrids[j], ".rda"))
+    match_orig$K.girds[i,j] <- rcomp$Krobust
+    yhat <- apply(rcomp$effect, 1:2, sum, na.rm=T)
+    match_orig$mse.m[i,j] <- mean((yhat - Y)^2)
+  }
+}
+save(match_orig, file=paste0(mydir, "res/", folder, "/match_orig.rda"))
+```
+
+The robustComponents() would suggest K=26 factors, more factors than any individual replicates: 
+```{r}
+load(paste0(mydir, "res/", folder, "/match_orig.rda"))
+
+match_orig$K.girds
+round(match_orig$mse.m, 3)
+paste0("The min. MSE = ", round(min(match_orig$mse.m), 3))
+tmp <- match_orig$K.girds
+tmp[match_orig$mse.m > min(match_orig$mse.m)] <- NA
+tmp
+```
+
+### 6.3.2. Using a list of posterior mean of reconstructed data
+
+```{r eval=F}
+R <- 15
+rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
+xw <- list()
+for(r in 1:R){
+  load(paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+  xw[[r]] <- pmXW_by_factor(res)
+  rep.summ$conv[r] <- res$conv
+  rep.summ$K[r] <- res$K
+}
+rep.use <- sort(rep.summ$conv, index.return=T)
+rep.use$ix[1:10]
+xw <- xw[rep.use$ix[1:10]]
+save(xw, file=paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+```
+
+```{r eval=F}
+load(paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+system.time(
+  match.mse <- MSE.Grids(
+    Ymtx=Y,                       ## the observed (normalized) data matrix (N x D)
+    maxK = max(rep.summ$K),       ## the maximal K among the GFA replicates
+    comps=xw,                     ## a list of GFA replicates with posterior medians
+    corGrids=corGrids,            ## the grids of corThr values to be assessed
+    matchGrids=matchGrids)        ## the grids of matchThr values to be assessed
+)
+save(match.mse, file=paste0(mydir, "res/", folder, "/MSE_xwList.rda"))
+```
+
+Numbers of matched factors for each (corThr, matchThr) combination:
+```{r}
+load(paste0(mydir, "res/", folder, "/MSE_xwList.rda"))
+match.mse$K.grid
+```
+
+The min-MSE and 1-SE criteria suggested K=23 (more than any individual replicates) and K=19 (cf. max. K = 20 among individual replicates) respectively:
+```{r}
+opt.par <- optimizeK(K.grids=match.mse$K.grid, mse.array=match.mse$mse$all)
+round(opt.par$mse.m, 3)
+paste0("The min. MSE = ", round(opt.par$mse.min, 3))
+paste0("The 1-SE MSE threshold = ", round(opt.par$mseThr, 3))
+paste0("min. MSE criterion gives ", opt.par$Krobust.min, " matched factors")
+paste0("1-SE MSE criterion gives ", opt.par$Krobust.1se, " matched factors")
+print("The min. MSE criterion suggested 20 factors")
+opt.par$par.min
+tmp <- match.mse$K.grid
+tmp[opt.par$mse.m > opt.par$mseThr] <- NA
+tmp[tmp > min(tmp, na.rm=T)] <- NA
+print("The 1-SE MSE criterion suggested 17 factors")
+tmp
+```
+
+# 7. (N,D,K,sd.noise) = (4000, 43, 37, 0)
+## 7.1 Simulate data
+X and Y
+```{r}
+folder <- "N4000_D43_K37_noise0"
+set.seed(123)
+dat <- data.simu(N=4000, W_DxK=W, varIdx.by.block, sd.noise=0)
+names(dat$Y.list) <- block.names
+mynorm <- normalizeData(train=dat$Y.list, type="scaleFeatures")
+Y <- do.call(cbind, mynorm$train)
+```
+
+## 7.2 Replicate GFA
+```{r eval=F}
+foreach(r = 1:15, .packages=c("GFA")) %dopar% {
+  set.seed(r)
+  res <- gfa(mynorm$train, opts=opts, K=43)
+  save(res, file=paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+}
+```
+
+With N=4000, individual GFA replicates returned K ranging from 31 to 35, closer to the true K=37. All replicates appeared to be converged.
+```{r}
+R <- 15
+rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
+gfaList_full <- list()
+for(r in 1:R){
+  load(paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+  gfaList_full[[r]] <- res
+  rep.summ$conv[r] <- res$conv
+  rep.summ$K[r] <- res$K
+}
+rep.summ[rep.summ$conv>0.08,]
+summary(rep.summ$conv)
+table(rep.summ$K)
+```
+
+Take the 10 replicates with lowest convergence stats, which returned K from 32 to 35:
+```{r}
+rep.use <- sort(rep.summ$conv, index.return=T)
+# round(rep.summ$conv[rep.use$ix[1:10]], 3)
+table(rep.summ$K[rep.use$ix[1:10]])
+gfaList_full <- gfaList_full[rep.use$ix[1:10]]
+```
+
+## 7.3 Identify robust factors
+
+Compute replicate- and factor-specific effects
+```{r eval=F}
+R <- 15
+rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
+xw <- list()
+for(r in 1:R){
+  load(paste0(mydir, "res/", folder, "/GFA_rep_", r, ".rda"))
+  xw[[r]] <- pmXW_by_factor(res)
+  rep.summ$conv[r] <- res$conv
+  rep.summ$K[r] <- res$K
+}
+rep.use <- sort(rep.summ$conv, index.return=T)
+rep.use$ix[1:10]
+xw <- xw[rep.use$ix[1:10]]
+save(xw, file=paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+```
+
+### 7.3.1 Using a list of the original GFA objects
+
+```{r eval=F}
+load(paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+tmp <- matrix(rep(NA, length(corGrids)*length(matchGrids)), 
+              nrow = length(corGrids), ncol = length(matchGrids),
+              dimnames = list(corThr=corGrids, matchThr=matchGrids))
+
+match_orig <- list(K.girds = tmp, mse.m = tmp, indices = rep( list(list()), length(corGrids) ))
+
+for(i in 1:length(corGrids)){
+  for (j in 6:length(matchGrids)){
+    # rcomp <- matchComponents(comps = comps, maxK = 37, N=4000, D = 43, corThr = corGrids[i], matchThr = matchGrids[j])
+    # save(rcomp, file=paste0(mydir, "res/", folder, "/rComp_corThr", corGrids[i], "_matchThr", matchGrids[j], ".rda"))
+    load(paste0(mydir, "res/", folder, "/rComp_corThr", corGrids[i], "_matchThr", matchGrids[j], ".rda"))
+    match_orig$K.girds[i,j] <- rcomp$Krobust
+    match_orig$indices[[i]][[j]] <- rcomp$indices
+    if(rcomp$Krobust>0){
+      yhat <- apply(rcomp$effect, 1:2, sum, na.rm=T)
+      match_orig$mse.m[i,j] <- mean((yhat - Y)^2)
+    }
+  }
+}
+save(match_orig, file=paste0(mydir, "res/", folder, "/match_orig.rda"))
+```
+
+The robustComponents() *revised to allow 0 macthed factors) would suggest K=35 factors
+```{r}
+load(paste0(mydir, "res/", folder, "/match_orig.rda"))
+
+match_orig$K.girds
+round(match_orig$mse.m, 3)
+paste0("The min. MSE = ", round(min(match_orig$mse.m, na.rm=T), 3))
+tmp <- match_orig$K.girds
+tmp[match_orig$mse.m > min(match_orig$mse.m, na.rm = T) | tmp==0] <- NA
+tmp
+```
+
+### 7.3.2. Using a list of posterior mean of reconstructed data
+
+```{r eval=F}
+load(paste0(mydir, "res/", folder, "/xw_by_rep_comp.rda"))
+system.time(
+  match.mse <- MSE.Grids(
+    Ymtx=Y,                       ## the observed (normalized) data matrix (N x D)
+    maxK = max(rep.summ$K),       ## the maximal K among the GFA replicates
+    comps=xw,                     ## a list of GFA replicates with posterior medians
+    corGrids=corGrids,            ## the grids of corThr values to be assessed
+    matchGrids=matchGrids)        ## the grids of matchThr values to be assessed
+) ## 2h:36m
+save(match.mse, file=paste0(mydir, "res/", folder, "/MSE_xwList.rda"))
+```
+
+Numbers of matched factors for each (corThr, matchThr) combination:
+```{r}
+load(paste0(mydir, "res/", folder, "/MSE_xwList.rda"))
+match.mse$K.grid
+```
+
+The 2 criteria suggested K=34 and K=30 respectively:
+```{r}
+opt.par <- optimizeK(K.grids=match.mse$K.grid, mse.array=match.mse$mse$all)
+round(opt.par$mse.m, 3)
+paste0("The min. MSE = ", round(opt.par$mse.min, 3))
+paste0("The 1-SE MSE threshold = ", round(opt.par$mseThr, 3))
+paste0("min. MSE criterion gives ", opt.par$Krobust.min, " matched factors")
+paste0("1-SE MSE criterion gives ", opt.par$Krobust.1se, " matched factors")
+opt.par$par.min
+tmp <- match.mse$K.grid
+tmp[opt.par$mse.m > opt.par$mseThr | tmp==0] <- NA
+tmp[tmp > min(tmp, na.rm=T)] <- NA
+paste0("The 1-SE MSE criterion suggested ", opt.par$Krobust.1se, " factors")
+tmp
+```
+
+## 7.4 Agreement between estimated and the true factors
+
+### 7.4.1 Robust factors identified using a list of posterior samples
+
+```{r eval=F}
+gfaList_p50 <- list()
+for (r in 1:R){ 
+  print( system.time(gfaList_p50[[r]] <- psSummary(gfa.res=gfaList_full[[r]], credible.lv=0.95)) )
+}
+save(gfaList_p50, file=paste0(mydir, "res/", folder, "/gfaList_p50.rda.rda"))
+```
+
+```{r}
+load(paste0(mydir, "res/", folder, "/gfaList_p50.rda.rda"))
+rob.ind <- list(indices=match_orig$indices[[1]][[4]])
+vars.by.block <- gfaList_full[[1]]$groups ## variable indices separated by
+# vars.by.block
+ve_full <- rob.var.exp(models=gfaList_p50, indices=rob.ind, block.names=block.names, varIdx.by.block=vars.by.block, use.unmatched=T, by.block=T)
+```
+
+```{r}
+tmp <- paste0(round(ve_full$ve.by.block$Mean, 1), ' +/- ', round(ve_full$ve.by.block$SE, 1))
+block.labs <- c("COG" = tmp[1], "CBCL" = tmp[2], "SOC" = tmp[3], "SMA" = tmp[4])
+    
+p <- ggplot(ve_full$ve.by.block.comp, 
+            aes(x=Component, y=Mean, ymin=Mean-SE, ymax=Mean+SE, color=Block)) +
+  geom_pointrange() +
+  facet_wrap(~ Block, labeller = labeller(Block = block.labs)) +
+  xlab('Robust factors') + ylab('Variance explained (%)') +
+  ggtitle("% variance explained by robust factors in each block")
+p
+```
+
+```{r}
+block4vars <- c(rep("COG", length(varIdx.by.block[[1]])), 
+                rep("CBCL", length(varIdx.by.block[[2]])), 
+                rep("SOC", length(varIdx.by.block[[3]])), 
+                rep("SMA", length(varIdx.by.block[[4]])))
+cbclabels <- c("Anxious/Depressed","Withdrawn","Somatic Sx","Social Problems","Thought Problems","Attention Problems","Rule Breaking","Aggressive Behavior","Internalizing","Externalizing","Total Problems")
+coglabels <- c("Picture Vocabulary","Flanker Tes","List Sorting","Card Sorting","Pattern Comparison","Picture Sequence","Oral Reading Recog","Fluid Composite","Crystallized Composite","Cognition Total","RAVLT Short Delay","RAVLT Long Delay","WISC-V Matrix Reasoning")
+soclabels <- c("P: Family Conflict","Y: Family Conflict","P: CPBRI Acceptance",
+               "SC: CPBRI Acceptance","P: Prosocial Behavior","Y: Prosocial",
+               "Y: Parental Monitoring")
+smalabels <- c("WD TV/Movie","WD Videos","WD Games","WD Texting","WD Social Network","WD Chat",
+               "WE TV/Movie","WE Videos","WE Games","WE Texting","WE Social Network","WE Chat")
+allvarlabs <- c(coglabels, cbclabels, soclabels, smalabels)
+```
+
+```{r eval=F}
+rWX_full <- rob_wx(models=gfaList_p50, indices=ve_full$indices, block.labs=block4vars, var.labs=allvarlabs)
+save(rWX_full, file=paste0(mydir, "res/", folder, "/rWX_full.rda"))
+```
+
+```{r}
+load(paste0(mydir, "res/", folder, "/rWX_full.rda"))
+gfa_heatmap(robW=rWX_full, block.names=block.names, varIdx.by.block=varIdx.by.block, conf.level=0.95, heatmap.rep=FALSE, factor.order=NULL)
+```
+
+Similarity (correlations) between true factor loadings (rows) and estimated (columns)
+```{r}
+# dim(rWX_full$w.med)
+sim_true_full <- matrix(NA, ncol(W), ncol(rWX_full$w.med), 
+                        dimnames=list(True=paste0("K", 1:ncol(W)), Full=paste0("K", 1:ncol(rWX_full$w.med))))
+for (i in 1:ncol(W)){
+  for(j in 1:ncol(rWX_full$w.med)){
+    sim_true_full[i,j] <- cor(W[,i], rWX_full$w.med[,j])
+  }
+}
+# round(sim_true_full, 1)
+
+heatmap.2(sim_true_full, col=c('cyan','deepskyblue3',"blue",'black','brown','orange',"yellow"), 
+          dendrogram='none', scale="none", 
+          cexRow = 0.3, cexCol=0.4, Colv=F, Rowv=F, density.info="none", trace="none", 
+          srtCol=0,   adjCol = c(0.5,1), symkey = F, 
+          breaks = c(-1.0, -0.8, -0.5, -0.2, 0.2, 0.5, 0.8, 1.0),
+          main="Corr. in W b/w true and estimated (K=35)" )
+```
+
+True (Row 1):Estimated (Row 2) factor matching (e.g. true factor K4 was matched to estimated K6)
+```{r}
+apply(abs(sim_true_full), 1, which.max)
+```
+
+Estimated (Row 1):True (Row 2) factor matching (e.g. Estimated K4 was matched to true K5)
+```{r}
+apply(abs(sim_true_full), 2, which.max)
+```
+
+```{r eval=F}
+Distribution of absolute values of correlations:
+summary(round(apply(abs(sim_true_full), 2, max), 1))
+ggplot(data.frame(corr=apply(abs(sim_true_full), 2, max)), aes(x=corr)) + geom_density() + ggtitle("Distribution of absolute values of correlations")
+```
+
+### 7.4.2 Robust factors identified using a list of posterior mean of reconstructed data and min-MSE criterion
+
+```{r}
+rob.ind <- list(indices=match.mse$indices[[1]][[4]])
+ve_p50.min <- rob.var.exp(models=gfaList_p50, indices=rob.ind, block.names=block.names, varIdx.by.block=vars.by.block, use.unmatched=T, by.block=T)
+```
+
+```{r}
+tmp <- paste0(round(ve_p50.min$ve.by.block$Mean, 1), ' +/- ', round(ve_p50.min$ve.by.block$SE, 1))
+block.labs <- c("COG" = tmp[1], "CBCL" = tmp[2], "SOC" = tmp[3], "SMA" = tmp[4])
+    
+p <- ggplot(ve_p50.min$ve.by.block.comp, 
+            aes(x=Component, y=Mean, ymin=Mean-SE, ymax=Mean+SE, color=Block)) +
+  geom_pointrange() +
+  facet_wrap(~ Block, labeller = labeller(Block = block.labs)) +
+  xlab('Robust factors') + ylab('Variance explained (%)') +
+  ggtitle("% variance explained by robust factors in each block")
+p
+```
+
+```{r eval=F}
+rWX_p50.min <- rob_wx(models=gfaList_p50, indices=ve_p50.min$indices, block.labs=block4vars, var.labs=allvarlabs)
+save(rWX_p50.min, file=paste0(mydir, "res/", folder, "/rWX_p50.min.rda"))
+```
+
+```{r}
+load(paste0(mydir, "res/", folder, "/rWX_p50.min.rda"))
+gfa_heatmap(robW=rWX_p50.min, block.names=block.names, varIdx.by.block=varIdx.by.block, conf.level=0.95, heatmap.rep=FALSE, factor.order=NULL)
+```
+
+Similarity (correlations) between true factor loadings (rows) and estimated (columns)
+```{r}
+sim_true_p50.min <- matrix(NA, ncol(W), ncol(rWX_p50.min$w.med), 
+                        dimnames=list(True=paste0("K", 1:ncol(W)), p50.min=paste0("K", 1:ncol(rWX_p50.min$w.med))))
+for (i in 1:ncol(W)){
+  for(j in 1:ncol(rWX_p50.min$w.med)){
+    sim_true_p50.min[i,j] <- cor(W[,i], rWX_p50.min$w.med[,j])
+  }
+}
+# round(sim_true_p50.min, 1)
+
+heatmap.2(sim_true_p50.min, col=c('cyan','deepskyblue3',"blue",'black','brown','orange',"yellow"), 
+          dendrogram='none', scale="none", 
+          cexRow = 0.3, cexCol=0.4, Colv=F, Rowv=F, density.info="none", trace="none", 
+          srtCol=0,   adjCol = c(0.5,1), symkey = F, 
+          breaks = c(-1.0, -0.8, -0.5, -0.2, 0.2, 0.5, 0.8, 1.0),
+          main="Corr. in W b/w true and estimated (K=34)" )
+```
+
+True (Row 1):Estimated (Row 2) factor matching (e.g. true factor K4 was matched to estimated K6)
+```{r}
+apply(abs(sim_true_p50.min), 1, which.max)
+```
+
+Estimated (Row 1):True (Row 2) factor matching (e.g. Estimated K4 was matched to true K5)
+```{r}
+apply(abs(sim_true_p50.min), 2, which.max)
+```
+
+```{r eval=F}
+## Distribution of absolute values of correlations:
+summary(round(apply(abs(sim_true_p50.min), 2, max), 1))
+ggplot(data.frame(corr=apply(abs(sim_true_p50.min), 2, max)), aes(x=corr)) + geom_density() + ggtitle("Distribution of absolute values of correlations")
+```
+
+#### 7.4.3 Robust factors identified using a list of posterior mean of reconstructed data and 1-SE criterion
+
+```{r}
+rob.ind <- list(indices=match.mse$indices[[1]][[6]])
+ve_p50.1se <- rob.var.exp(models=gfaList_p50, indices=rob.ind, block.names=block.names, varIdx.by.block=vars.by.block, use.unmatched=T, by.block=T)
+```
+
+```{r}
+tmp <- paste0(round(ve_p50.1se$ve.by.block$Mean, 1), ' +/- ', round(ve_p50.1se$ve.by.block$SE, 1))
+block.labs <- c("COG" = tmp[1], "CBCL" = tmp[2], "SOC" = tmp[3], "SMA" = tmp[4])
+    
+p <- ggplot(ve_p50.1se$ve.by.block.comp, 
+            aes(x=Component, y=Mean, ymin=Mean-SE, ymax=Mean+SE, color=Block)) +
+  geom_pointrange() +
+  facet_wrap(~ Block, labeller = labeller(Block = block.labs)) +
+  xlab('Robust factors') + ylab('Variance explained (%)') +
+  ggtitle("% variance explained by robust factors in each block")
+p
+```
+
+```{r eval=F}
+rWX_p50.1se <- rob_wx(models=gfaList_p50, indices=ve_p50.1se$indices, block.labs=block4vars, var.labs=allvarlabs)
+save(rWX_p50.1se, file=paste0(mydir, "res/", folder, "/rWX_p50.1se.rda"))
+```
+
+```{r}
+load(paste0(mydir, "res/", folder, "/rWX_p50.1se.rda"))
+gfa_heatmap(robW=rWX_p50.1se, block.names=block.names, varIdx.by.block=varIdx.by.block, conf.level=0.95, heatmap.rep=FALSE, factor.order=NULL)
+```
+
+Similarity (correlations) between true factor loadings (rows) and estimated (columns)
+```{r}
+sim_true_p50.1se <- matrix(NA, ncol(W), ncol(rWX_p50.1se$w.med), 
+                        dimnames=list(True=paste0("K", 1:ncol(W)), p50.1se=paste0("K", 1:ncol(rWX_p50.1se$w.med))))
+for (i in 1:ncol(W)){
+  for(j in 1:ncol(rWX_p50.1se$w.med)){
+    sim_true_p50.1se[i,j] <- cor(W[,i], rWX_p50.1se$w.med[,j])
+  }
+}
+# round(sim_true_p50.min, 1)
+
+heatmap.2(sim_true_p50.1se, col=c('cyan','deepskyblue3',"blue",'black','brown','orange',"yellow"), 
+          dendrogram='none', scale="none", 
+          cexRow = 0.3, cexCol=0.4, Colv=F, Rowv=F, density.info="none", trace="none", 
+          srtCol=0,   adjCol = c(0.5,1), symkey = F, 
+          breaks = c(-1.0, -0.8, -0.5, -0.2, 0.2, 0.5, 0.8, 1.0),
+          main="Corr. in W b/w true and estimated (K=30)" )
+```
+
+True (Row 1):Estimated (Row 2) factor matching (e.g. true factor K4 was matched to estimated K6)
+```{r}
+apply(abs(sim_true_p50.1se), 1, which.max)
+```
+
+Estimated (Row 1):True (Row 2) factor matching (e.g. Estimated K4 was matched to true K5)
+```{r}
+apply(abs(sim_true_p50.1se), 2, which.max)
+```
+
+```{r eval=F}
+## Distribution of absolute values of correlations:
+summary(round(apply(abs(sim_true_p50.1se), 2, max), 1))
+ggplot(data.frame(corr=apply(abs(sim_true_p50.1se), 2, max)), aes(x=corr)) + geom_density() + ggtitle("Distribution of absolute values of correlations")
+```
+
+## 7.5 Consistency of matching
+
+### 7.5.1 Using full posterior samples 
+Estimated (Row 1):True (Row 2) factor matching
+```{r}
+apply(abs(sim_true_full), 2, which.max) 
+```
+
+Estimated factors were matched to the true factors (K10, K13, & K27) twice 
+```{r}
+table(apply(abs(sim_true_full), 2, which.max))
+```
+
+True factors not matched
+```{r}
+paste0("K", 1:37)[!c(1:37) %in% apply(abs(sim_true_full), 2, which.max)]
+```
+
+True variance explained by the unmatched factors
+```{r}
+paste0(round(sum(W[, c(17, 20, 25, 36, 37)]^2)/43*100, 1), "%")
+```
+
+### 7.5.2 Using posterior means of factor effects and min-MSE criterion 
+Estimated (Row 1):True (Row 2) factor matching. 
+```{r}
+apply(abs(sim_true_p50.min), 2, which.max) 
+```
+
+Estimated factors were matched to the true factors (K10, K13, & K27) twice 
+```{r}
+table(apply(abs(sim_true_p50.min), 2, which.max))
+```
+
+True factors not matched (1 additional true factor K28 was not matched)
+```{r}
+paste0("K", 1:37)[!c(1:37) %in% apply(abs(sim_true_p50.min), 2, which.max)]
+```
+
+True variance explained by the unmatched factors
+```{r}
+paste0(round(sum(W[, c(17, 20, 25, 28, 36, 37)]^2)/43*100, 1), "%")
+```
+
+### 7.5.3 Using posterior means of factor effects and 1-SE criterion 
+Estimated (Row 1):True (Row 2) factor matching. 
+```{r}
+apply(abs(sim_true_p50.1se), 2, which.max) 
+```
+
+Estimated factors were matched to the true factors (K10, K13) twice 
+```{r}
+table(apply(abs(sim_true_p50.1se), 2, which.max))
+```
+
+True factors not matched ( additional true factors not matched K24, K27, K28, K33)
+```{r}
+paste0("K", 1:37)[!c(1:37) %in% apply(abs(sim_true_p50.1se), 2, which.max)]
+```
+
+True variance explained by the unmatched factors
+```{r}
+paste0(round(sum(W[, c(17, 20, 25, 36, 37, 24, 27, 28, 33)]^2)/43*100, 1), "%")
+```
+
+# Conclusions
+
+Based on this small scale simulation, 
+
+1. Increased noise and/or smaller sample sizes (with respect to K or D:K ratio) may reduce the number of factors in GFA runs
+
+2. Even with simple cases (large N, high D:K ratio) and macthed with correct number of factors, some true factors may be missed 
+
+3. For high D (total number of variables):K (factor number) ratio, 
+
+4. For low D (total number of variables):K (factor number) ratio, 
+
+  * larger sample sizes are required to capture all/most factors
+
+  * Some factors were macthed more than once, which may be (part of) the reason(s) that variance explained exceeds 100% (another reason might be SD of some simulated factor scores deviated from 1)
+
+  * the full-sample approach and the summary statistic appraoch with the min-MSE criterion seemed to give more matched factors, with the higher risk of matching the same factor multiple times; the summary statistic appraoch with the 1-SE criterion seemed to give fewer matched factors, with fewer same factors matched multiple times  
+
+
+
+
+
+
