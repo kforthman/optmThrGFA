@@ -1,4 +1,5 @@
 ##### For true W matrix parameters #####
+# This is a test commit
 W_heatmap <- function(W_DxK, varIdx.by.block, block.names){
   gr <- varIdx.by.block; M <- length(gr)
   names(gr) <- block.names
