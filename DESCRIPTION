@@ -1,13 +1,11 @@
 Package: optmThrGFA
-Title: What the Package Does (One Line, Title Case)
+Title: Optimize Thresholds for GFA.
 Version: 0.0.0.9000
-Authors@R: 
-    person(given = "First",
-           family = "Last",
-           role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: What license it uses
+Authors@R: c(person("Katie", "Forthman", email = "kclary@laureateinstitute.org", role = c("aut", "cre")), person("Hung-wen", "Yeh", email = "hyeh@laureateinstitute.org", role = c("aut")))
+Description: Optimizes parameters for GFA.
+Depends: R (>= 3.5.3), GFA (>= 1.0.3)
+License: None
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 6.1.1.9000
+
