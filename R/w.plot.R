@@ -1,5 +1,5 @@
 ### 4a. a base function to create a heat map
-w_plot <- function(w, D, K, gr1, conf.level, replicate){
+w.plot <- function(w, D, K, gr1, conf.level, replicate){
   mar <- c(6,4,4,6)
   par(mar=mar)
   cols <- colorRampPalette(c("orange","red","white","blue","cyan"))(19)

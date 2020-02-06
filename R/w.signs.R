@@ -1,5 +1,5 @@
 ### Flip signs of factor loadings to ensure factors in the same direction across replicates
-w_signs <- function(models, rob, use.unmatched=F){
+w.signs <- function(models, rob, use.unmatched=F){
   indices <- abs(rob$indices)
   if (!use.unmatched){
     indices[rob$indices<0] <- 0

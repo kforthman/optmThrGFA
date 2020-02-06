@@ -1,6 +1,6 @@
 # a fcuntion to compute MSE b/w observed and reconstructed data matrices for each replicate for
 #   each pair of (corThr, matchThr).
-MSE_Grids <- function(Ymtx, maxK, comps, corGrids, matchGrids){
+MSE.Grids <- function(Ymtx, maxK, comps, corGrids, matchGrids){
   R = length(comps)
 
   indices <- rep( list(list()), length(corGrids) )

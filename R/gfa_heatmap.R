@@ -13,13 +13,13 @@ gfa_heatmap <- function(robW, block.names, varIdx.by.block, conf.level, heatmap.
                       nrow(robW$w.med), ncol(robW$w.med))
       colnames(w.tmp) <- 1:ncol(robW$w.med)
       rownames(w.tmp) <- rownames(robW$w.med)
-      w_plot(w.tmp, D=nrow(w.tmp), K=ncol(w.tmp), gr1, conf.level, r)
+      w.plot(w.tmp, D=nrow(w.tmp), K=ncol(w.tmp), gr1, conf.level, r)
     }
   }
   # print('Robust heat map')
   if(!is.null(factor.order)){
-    w_plot(robW$w.med[, factor.order], D=nrow(robW$w.med), K=ncol(robW$w.med), gr1, conf.level, replicate=NULL)
+    w.plot(robW$w.med[, factor.order], D=nrow(robW$w.med), K=ncol(robW$w.med), gr1, conf.level, replicate=NULL)
   } else {
-    w_plot(robW$w.med, D=nrow(robW$w.med), K=ncol(robW$w.med), gr1, conf.level, replicate=NULL)
+    w.plot(robW$w.med, D=nrow(robW$w.med), K=ncol(robW$w.med), gr1, conf.level, replicate=NULL)
   }
 }

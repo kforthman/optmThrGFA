@@ -1,7 +1,7 @@
 ### a function to compute % variance explained
-rob_var_exp <- function(models, indices, block.names, varIdx.by.block, use.unmatched=F, by.block=T){
+rob.var.exp <- function(models, indices, block.names, varIdx.by.block, use.unmatched=F, by.block=T){
   n.reps <- length(models)
-  indices <- w_signs(models, indices, use.unmatched)
+  indices <- w.signs(models, indices, use.unmatched)
   K.rob <- ncol(indices)
   W.p50.rep <- array(NA, dim=c(nrow(models[[1]]$W.Summ$p50), K.rob, n.reps))
   for (r in 1:n.reps){
