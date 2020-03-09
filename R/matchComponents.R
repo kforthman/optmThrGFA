@@ -1,5 +1,14 @@
-#### Revise robustComponents() to allow 0 matched factors
-## Internal function for matching components
+#' Internal function for matching components.
+#'
+#' Revise robustComponents() to allow 0 matched factors.
+#'
+#' @param comps No description.
+#' @param maxK No description.
+#' @param N No description.
+#' @param D No description.
+#' @param corThr No description.
+#' @param matchThr No description.
+#'
 matchComponents <- function(comps, maxK, N, D, corThr, matchThr) {
   corList <- list()
   reps <- length(comps)

@@ -1,5 +1,13 @@
-# a fcuntion to compute MSE b/w observed and reconstructed data matrices for each replicate for
-#   each pair of (corThr, matchThr).
+#' A function to compute MSE.
+#'
+#' A function to compute MSE b/w observed and reconstructed data matrices for each replicate for
+#' each pair of (corThr, matchThr).
+#'
+#' @param Ymtx No description.
+#' @param corGrids No description.
+#' @param matchGrids No description.
+#' @inheritParams matchFactors
+
 MSE.Grids <- function(Ymtx, maxK, comps, corGrids, matchGrids){
   R = length(comps)
 
@@ -14,7 +22,12 @@ MSE.Grids <- function(Ymtx, maxK, comps, corGrids, matchGrids){
     for (j in 1:length(matchGrids)){
       print(paste(Sys.time(),": ",i,",",j))
 
-      tmp <- matchFactors(comps, maxK, corThr=corGrids[i], matchThr=matchGrids[j])
+      tmp <- matchFactors(
+        comps = comps,
+        maxK = maxK,
+        corThr = corGrids[i],
+        matchThr = matchGrids[j]
+        )
       if(ncol(tmp$indices)>0){
         indices[[i]][[j]] <- tmp$indices
         K.grids[i,j] <- tmp$Krobust # ifelse(tmp$Krobust > max(K.by.rep), K.by.rep, tmp$Krobust)

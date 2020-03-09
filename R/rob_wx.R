@@ -1,4 +1,10 @@
-### a function to compute robust loadings and robust scores
+#' A function to compute robust loadings and robust scores.
+#'
+#' @param models No description.
+#' @param indices No description.
+#' @param block.labs No description.
+#' @param var.labs No description.
+
 rob_wx <- function(models, indices, block.labs, var.labs=NULL){
   N <- nrow(models[[1]]$X.Summ$p50)
   if("W.Summ" %in% names(models[[1]])){

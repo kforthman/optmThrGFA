@@ -1,4 +1,10 @@
-##### a function adopted from GFA::matchComponents to match factors #####
+#' A function to match factors.
+#'
+#' @param comps No description.
+#' @param maxK No description.
+#' @param corThr No description.
+#' @param matchThr No description.
+#'
 matchFactors <- function(comps, maxK, corThr, matchThr){
   reps <- length(comps)
   rob <- list(Krobust=0, indices=matrix(NA,reps,0), cor=matrix(NA,reps,0))

@@ -1,7 +1,10 @@
-##### for data simulation #####
-## N: sample size
-## tW.list: a list of matrices with K x D_{i} dimension
-## sd.noise: SD of random Gaussian noise
+#' For data simulation.
+#'
+#' @param N sample size
+#' @param W_DxK a list of matrices with K x D_{i} dimension
+#' @param varIdx.by.block No description.
+#' @param sd.noise SD of random Gaussian noise
+
 data.simu <- function(N, W_DxK, varIdx.by.block, sd.noise){
   B = length(varIdx.by.block)
   K = ncol(W_DxK)

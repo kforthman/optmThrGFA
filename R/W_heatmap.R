@@ -1,6 +1,12 @@
-##### For true W matrix parameters #####
+#' For true W matrix parameters.
+#'
+#' @param W_DxK No description.
+#' @param varIdx.by.block No description.
+#' @param block.names No description.
+
 W_heatmap <- function(W_DxK, varIdx.by.block, block.names){
-  gr <- varIdx.by.block; M <- length(gr)
+  gr <- varIdx.by.block
+  M <- length(gr)
   names(gr) <- block.names
   gr1 <- c(0, cumsum(sapply(gr, length)))
   names(gr1) <- c(names(gr), "NA")

@@ -1,4 +1,8 @@
-# a function to identify optimal (corThr, matchThr)
+#' A function to identify optimal (corThr, matchThr).
+#'
+#' @param K.grids No description.
+#' @param mse.array No description.
+
 optimizeK <- function(K.grids, mse.array){ # c(N.corGrids, N.matchGrids, N.reps)
   reps = dim(mse.array)[3]
   mse.m <- apply(mse.array, 1:2, mean, na.rm=T)

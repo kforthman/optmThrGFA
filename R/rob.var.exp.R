@@ -1,7 +1,13 @@
-### a function to compute % variance explained
-rob.var.exp <- function(models, indices, block.names, varIdx.by.block, use.unmatched=F, by.block=T){
+#' A function to compute \% variance explained
+#'
+#' @param block.names No description.
+#' @param varIdx.by.block No description.
+#' @param by.block No description.
+#' @inheritParams w.signs
+
+rob.var.exp <- function(models, rob, block.names, varIdx.by.block, use.unmatched=F, by.block=T){
   n.reps <- length(models)
-  indices <- w.signs(models, indices, use.unmatched)
+  indices <- w.signs(models = models, rob = rob, use.unmatched = use.unmatched)
   K.rob <- ncol(indices)
   W.p50.rep <- array(NA, dim=c(nrow(models[[1]]$W.Summ$p50), K.rob, n.reps))
   for (r in 1:n.reps){

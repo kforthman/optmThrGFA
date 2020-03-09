@@ -1,8 +1,15 @@
-##### Functions to extract robust factors #####
-### 0. Using the GFA::gfa() resulting object to compute
-###    (1) posterior medians
-###    (2) credible interval limits
-###    (3) factor-wise reconstratced data (i.e. X * W)
+#' Functions to extract robust factors.
+#'
+#' Functions to extract robust factors
+#' (0) Using the GFA::gfa() resulting object to compute
+#' (1) posterior medians
+#' (2) credible interval limits
+#' (3) factor-wise reconstratced data (i.e. X * W)
+#'
+#' @param gfa.res No description.
+#' @param credible.lv No description.
+
+
 psSummary <- function(gfa.res, credible.lv){
   p.vec <- c((1-credible.lv)/2, 0.5, (1+credible.lv)/2)
   # dimensions = 3 (quantiles) x D x K

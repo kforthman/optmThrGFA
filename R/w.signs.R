@@ -1,4 +1,9 @@
-### Flip signs of factor loadings to ensure factors in the same direction across replicates
+#' Flip signs of factor loadings to ensure factors in the same direction across replicates.
+#'
+#' @param models No description.
+#' @param rob No description.
+#' @param use.unmatched No description.
+
 w.signs <- function(models, rob, use.unmatched=F){
   indices <- abs(rob$indices)
   if (!use.unmatched){
