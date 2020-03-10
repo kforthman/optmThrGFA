@@ -9,6 +9,7 @@
 #' @param heatmap.rep No description.
 #' @param factor.order No description.
 #' @inheritParams w.plot
+#' @export
 
 gfa_heatmap <- function(robW, block.names, varIdx.by.block, conf.level, heatmap.rep=FALSE, factor.order=NULL){
   n.rep <- max(robW$w.ci$Replicate)

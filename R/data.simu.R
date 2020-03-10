@@ -4,6 +4,7 @@
 #' @param W_DxK a list of matrices with K x D_{i} dimension
 #' @param varIdx.by.block No description.
 #' @param sd.noise SD of random Gaussian noise
+#' @export
 
 data.simu <- function(N, W_DxK, varIdx.by.block, sd.noise){
   B = length(varIdx.by.block)

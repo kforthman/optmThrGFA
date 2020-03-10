@@ -7,6 +7,7 @@
 #' @param corGrids No description.
 #' @param matchGrids No description.
 #' @inheritParams matchFactors
+#' @export
 
 MSE.Grids <- function(Ymtx, maxK, comps, corGrids, matchGrids){
   R = length(comps)

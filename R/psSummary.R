@@ -8,6 +8,7 @@
 #'
 #' @param gfa.res No description.
 #' @param credible.lv No description.
+#' @export
 
 
 psSummary <- function(gfa.res, credible.lv){

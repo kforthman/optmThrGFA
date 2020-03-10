@@ -3,6 +3,7 @@
 #' @param W_DxK No description.
 #' @param varIdx.by.block No description.
 #' @param block.names No description.
+#' @export
 
 W_heatmap <- function(W_DxK, varIdx.by.block, block.names){
   gr <- varIdx.by.block

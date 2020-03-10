@@ -2,6 +2,7 @@
 #'
 #' @param K.grids No description.
 #' @param mse.array No description.
+#' @export
 
 optimizeK <- function(K.grids, mse.array){ # c(N.corGrids, N.matchGrids, N.reps)
   reps = dim(mse.array)[3]

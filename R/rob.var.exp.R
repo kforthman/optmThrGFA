@@ -4,6 +4,7 @@
 #' @param varIdx.by.block No description.
 #' @param by.block No description.
 #' @inheritParams w.signs
+#' @export
 
 rob.var.exp <- function(models, rob, block.names, varIdx.by.block, use.unmatched=F, by.block=T){
   n.reps <- length(models)

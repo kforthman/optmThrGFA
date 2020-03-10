@@ -3,6 +3,7 @@
 #' @param models No description.
 #' @param rob No description.
 #' @param use.unmatched No description.
+#' @export
 
 w.signs <- function(models, rob, use.unmatched=F){
   indices <- abs(rob$indices)

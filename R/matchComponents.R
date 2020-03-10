@@ -8,6 +8,7 @@
 #' @param D No description.
 #' @param corThr No description.
 #' @param matchThr No description.
+#' @export
 #'
 matchComponents <- function(comps, maxK, N, D, corThr, matchThr) {
   corList <- list()

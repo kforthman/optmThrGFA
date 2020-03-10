@@ -8,7 +8,7 @@
 #' @param gr1 No description.
 #' @param conf.level No description.
 #' @param replicate No description.
-#'
+#' @export
 
 w.plot <- function(w, D, K, gr1, conf.level, replicate){
   mar <- c(6,4,4,6)

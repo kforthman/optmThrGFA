@@ -4,6 +4,7 @@
 #' @param maxK No description.
 #' @param corThr No description.
 #' @param matchThr No description.
+#' @export
 #'
 matchFactors <- function(comps, maxK, corThr, matchThr){
   reps <- length(comps)

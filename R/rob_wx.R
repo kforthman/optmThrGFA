@@ -4,6 +4,7 @@
 #' @param indices No description.
 #' @param block.labs No description.
 #' @param var.labs No description.
+#' @export
 
 rob_wx <- function(models, indices, block.labs, var.labs=NULL){
   N <- nrow(models[[1]]$X.Summ$p50)
