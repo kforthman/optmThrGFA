@@ -1,9 +1,16 @@
-#' For data simulation.
+#' Simulate data from a given posterior matrix.
+#'
+#' Simulates observed data given the posterior, W, the block
+#' assignments for each variable, and the
+#' number of observations, N.
 #'
 #' @param N sample size
 #' @param W_DxK a list of matrices with K x D_{i} dimension
-#' @param varIdx.by.block No description.
-#' @param sd.noise SD of random Gaussian noise
+#' @param varIdx.by.block specifies which variables are in which block. Must be input as a list where each element corresponds to the block number and contains a vector of indicies of the variables that belong to that block.
+#' @param sd.noise SD of random Gaussian noise in the observations.
+#' @return A list containing the following elements:
+#' \item{Y.list}{A list where each element corresponds to a block. Each block contains the observed values of the variables in that block.}
+#' \item{X}{Contains the factor values of each observation.}
 #' @export
 
 data.simu <- function(N, W_DxK, varIdx.by.block, sd.noise){

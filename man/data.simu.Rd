@@ -2,7 +2,9 @@
 % Please edit documentation in R/data.simu.R
 \name{data.simu}
 \alias{data.simu}
-\title{For data simulation.}
+\title{Simulates observed data given the posterior, W, the block
+assignments for each variable and the
+number of observations, N.}
 \usage{
 data.simu(N, W_DxK, varIdx.by.block, sd.noise)
 }
@@ -11,10 +13,17 @@ data.simu(N, W_DxK, varIdx.by.block, sd.noise)
 
 \item{W_DxK}{a list of matrices with K x D_{i} dimension}
 
-\item{varIdx.by.block}{No description.}
+\item{varIdx.by.block}{Specifies which variables are in which block. Must be input as a list where each element corresponds to the block number and contains a vector of indicies of the variables that belong to that block.}
 
-\item{sd.noise}{SD of random Gaussian noise}
+\item{sd.noise}{SD of random Gaussian noise in the observations.}
+}
+\value{
+A list containing the following elements:
+\item{Y.list}{A list where each element corresponds to a block. Each block contains the observed values of the variables in that block.}
+\item{X}{Contains the factor values of each observation.}
 }
 \description{
-For data simulation.
+Simulates observed data given the posterior, W, the block
+assignments for each variable and the
+number of observations, N.
 }
