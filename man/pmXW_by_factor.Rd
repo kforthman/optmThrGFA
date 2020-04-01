@@ -7,7 +7,7 @@
 pmXW_by_factor(gfa.obj)
 }
 \arguments{
-\item{gfa.obj}{No description.}
+\item{gfa.obj}{A GFA object as output by the gfa() function in the package GFA.}
 }
 \description{
 Compute factor-specific posterior mean of reconstructed data (X*t(W)).

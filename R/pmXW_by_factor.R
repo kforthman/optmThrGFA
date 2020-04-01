@@ -1,6 +1,6 @@
 #' Compute factor-specific posterior mean of reconstructed data (X*t(W)).
 #'
-#' @param gfa.obj No description.
+#' @param gfa.obj A GFA object as output by the gfa() function in the package GFA.
 #' @export
 
 pmXW_by_factor <- function(gfa.obj){
