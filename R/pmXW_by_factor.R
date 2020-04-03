@@ -5,9 +5,9 @@
 
 pmXW_by_factor <- function(gfa.obj){
   comps <- list()
-  for (k in 1:res$K) {
-    comp <- crossprod(res$posterior$X[,,k], res$posterior$W[,,k])
-    comps[[k]] <- comp / res$opts$iter.saved
+  for (k in 1:gfa.obj$K) {
+    comp <- crossprod(gfa.obj$posterior$X[,,k], gfa.obj$posterior$W[,,k])
+    comps[[k]] <- comp / gfa.obj$opts$iter.saved
   }
   return(comps)
 }
