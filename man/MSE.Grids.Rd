@@ -2,20 +2,20 @@
 % Please edit documentation in R/MSE.Grids.R
 \name{MSE.Grids}
 \alias{MSE.Grids}
-\title{A function to compute MSE.}
+\title{A function to compute MSE of the GFA given robust components thresholds.}
 \usage{
 MSE.Grids(Ymtx, maxK, comps, corGrids, matchGrids)
 }
 \arguments{
-\item{Ymtx}{No description.}
+\item{Ymtx}{The set of observed data as an NxD matrix.}
 
-\item{maxK}{No description.}
+\item{maxK}{The maximal K among the GFA replicates.}
 
-\item{comps}{No description.}
+\item{comps}{A list of GFA replicates with posterior medians.}
 
-\item{corGrids}{No description.}
+\item{corGrids}{is a vector of cor thresholds to be tested. Cor threshold defines how close two components are required to be, in terms of correlation, in order to match them.}
 
-\item{matchGrids}{No description.}
+\item{matchGrids}{is a vector of match thresholds to be tested. Match threshold describes the proportion of sampling chains that need to contain a component in order to include it in the robust components.}
 }
 \description{
 A function to compute MSE b/w observed and reconstructed data matrices for each replicate for

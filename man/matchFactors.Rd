@@ -7,13 +7,13 @@
 matchFactors(comps, maxK, corThr, matchThr)
 }
 \arguments{
-\item{comps}{No description.}
+\item{comps}{A list of GFA replicates with posterior medians.}
 
-\item{maxK}{No description.}
+\item{maxK}{The maximal K among the GFA replicates.}
 
-\item{corThr}{No description.}
+\item{corThr}{Cor threshold defines how close two components are required to be, in terms of correlation, in order to match them.}
 
-\item{matchThr}{No description.}
+\item{matchThr}{Match threshold describes the proportion of sampling chains that need to contain a component in order to include it in the robust components.}
 }
 \description{
 A function to match factors.
