@@ -13,6 +13,9 @@ output:
 word_document: default
 ---
 
+# ??? Marks a place where the documentation needs to be expanded
+# !!! Marks a place where an error may occur and the code needs correction.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -41,6 +44,15 @@ library(devtools)
 library(optmThrGFA)
 ```
 
+## 0.4 A brief overview of GFA
+From the paper *Group Factor Analysis*, 2014, by Klami et al.
+The group factor analysis problem is as follows: Assume a collection of observations $y_i ∈ \mathbb{R}^D$ for $i = 1,...,N$ collected in a data matrix $Y ∈ \mathbb{R}^{N×D}$, and a disjoint partition of the $D$ variables into $M$ groups {$G_m$}. The GFA task is to find a set of $K$ factors that describe $Y$ so that relationships between the groups can be separated from relationships within the groups. For notational simplicity, assume that the first $D_1$ variables correspond to the first group $G_1$, the following $D_2$ variables to $G_2$, and so on. Then we can write $Y = [X^{(1)}, ..., X^{(M)}]$, where $X^{(m)}$ is a subset of the data corresponding to $G_m$. We use $x_i^{(m)}$ to denote the $i$th sample (row) of $X^{(m)}$. Throughout
+this paper we use the superscript $(m)$ to denote variables related to the $m$th group or data set.
+
+A general solution to the GFA problem can be formulated as a joint factor model for the observed data sets. The model for the mth group of the ith sample is
+$$\textbf{x}_i^{(m)} \sim \mathcal{N}(\textbf{W}^{(m)⊤} \textbf{z}_i, \tau_m^{-1} \textbf{I})$$
+where $W^{(m)⊤} = [w_1^{(m)}, ..., w_K^{(m)}], z_i∈ \mathbb{R}^K$ and $\tau_m$ is noise precision. Equivalently, we can directly write $y_i = W^⊤ z_i + ε_i$, where $ε_i$ is Gaussian noise with diagonal covariance but separate variance for each group, by denoting $W = [W^{(1)},...,W^{(M)}]$.
+
 # 1. (N,D,K,sd.noise) = (100, 40, 7, 0)
 Sample size, N = 100
 Number of variables, D = 40
@@ -65,10 +77,7 @@ block.names <- paste0("Block_", 1:n.blocks)
 block4vars <-unlist(
   lapply(1:n.blocks, function(x){
     rep(block.names[x], block.length[x])
-    }))
-
-# move this
-corGrids <- matchGrids <- c(seq(0.1, 0.5, by=0.2), seq(0.6, 0.9, 0.1))
+  }))
 ```
 
 ### 1.1.1 Create the posterior matrix, W
@@ -133,7 +142,7 @@ Y <- do.call(cbind, mynorm$train)
 ```
 
 Calculate variance explained.
-???
+This is simply a check that the variance explained by the generated data adds up to 1.
 ```{r eval = T}
 # Increase sample size for total ve -> 1
 veTrue <- matrix(nrow = K, ncol = 1)
@@ -142,8 +151,8 @@ veTrue <- matrix(nrow = K, ncol = 1)
 for(k in 1:K){ 
   veTrue[k] <- 
     mean(
-    diag(
-      W[, k] %*% t(W[, k])
+      diag(
+        W[, k] %*% t(W[, k])
       )
     ) * var(dat$X[,k])
 }
@@ -160,12 +169,13 @@ round(apply(dat$X, 2, sd), 2)
 ```
 
 ## 1.2 Replicate GFA
-Perform GFA 10 times on the 
+Perform GFA 10 times on the simulated data.
 ```{r eval = T}
 # R is the number of replicates
 R <- 10
 overwrite <- F
 
+# Writes output from gfa function to a .rda file.
 foreach(r = 1:R, .packages=c("GFA")) %dopar% {
   this.filename <- paste0("res/", folder, "/GFA_rep_", r, ".rda")
   if(!file.exists(this.filename) | overwrite){
@@ -176,68 +186,84 @@ foreach(r = 1:R, .packages=c("GFA")) %dopar% {
 }
 ```
 
-With no noise, all 10 replicates converged and returned the correct K=7:
+Along with the GFA results are saved some useful information about each replicate. Here, we look at the convergence value (desired to be <0.05) and the inferred number of factors (desired K = `K`). Recall that no noise was added to the simulated data. Therefore, the GFA should have worked quite well.
+The table produced shows that all 10 replicates converged and returned the correct K:
 ```{r}
 rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
 gfaList_full <- list()
+
+# Load in the generated GFA results. Recorded in the data.frame `rep.summ` are the values
+# - conv: An estimate of the convergence of the model's reconstruction based on Geweke diagnostic. 
+# Values significantly above 0.05 imply a non-converged model,
+# and hence the need for a longer sampling chain.
+# - K: The number of components inferred.
 for(r in 1:R){
   load(paste0("res/", folder, "/GFA_rep_", r, ".rda"))
   gfaList_full[[r]] <- res
   rep.summ$conv[r] <- res$conv
   rep.summ$K[r] <- res$K
 }
+
+# The convergence value should be below 0.05 to indicate the model has converged.
+# Below is shown a summary of the convergence values of the replicates.
 summary(rep.summ$conv)
-table(rep.summ$K)
-# kable(rep.summ, digits=2)
+
+# This is a table showing the convergence values of all replicates, as well as the inferred number of factors.
+kable(rep.summ, digits=2)
 ```
 
 ## 1.3 Identify robust factors
 
-Compute replicate- and factor-specific effects
-```{r eval = T}
-rep.summ <- data.frame(Replicate=1:R, conv=rep(NA, R), K=rep(NA, R))
-
-xw_by_rep_comp.filename <- paste0("res/", folder, "/xw_by_rep_comp.rda")
-if(!file.exists(xw_by_rep_comp.filename)){
-  xw <- list()
-  for(r in 1:R){
-    load(paste0("res/", folder, "/GFA_rep_", r, ".rda"))
-    xw[[r]] <- pmXW_by_factor(res)
-    rep.summ$conv[r] <- res$conv
-    rep.summ$K[r] <- res$K
-  }
-  rep.use <- sort(rep.summ$conv, index.return=T)
-  rep.use$ix[1:10]
-  xw <- xw[rep.use$ix[1:10]]
-  save(xw, file = xw_by_rep_comp.filename)
-}
-```
-
 ### 1.3.1 Using a list of original GFA objects
 
 ```{r eval = T}
-load(paste0("res/", folder, "/xw_by_rep_comp.rda"))
-tmp <- matrix(rep(NA, length(corGrids)*length(matchGrids)), 
-              nrow = length(corGrids), ncol = length(matchGrids),
-              dimnames = list(corThr=corGrids, matchThr=matchGrids))
+# corGrids and matchGrids are the threshold parameters. 
+# corThr: How close two components are required to be, in terms of correlation, in order to match them.
+# matchThr: The proportion of sampling chains that need to contain a component in order to include it in the robust components.
+corGrids   <- c(seq(0.1, 0.5, by=0.2), seq(0.6, 0.9, 0.1))
+matchGrids <- c(seq(0.1, 0.5, by=0.2), seq(0.6, 0.9, 0.1))
 
+# file name
 match.filename <- paste0("res/", folder, "/match_orig.rda")
+
 if(!file.exists(match.filename)){
+  # Create an empty matrix.
+  tmp <- matrix(NA, 
+                nrow = length(corGrids), 
+                ncol = length(matchGrids),
+                dimnames = list(corThr=corGrids, matchThr=matchGrids))
+  
+  # K.girds is a matrix with 2 dimensions: corThresh (rows, i) and matchThresh (columns, j). It will contain the number of robust components found with the given thresholds i,j.
+  # indicies is a list with 2 dimensions: corThresh and matchThresh. Every element is an RxK matrix containing the corresponding component indices. Negative indices denote the closest component in the corresponding repetition, having no components above the threshold.
   match_orig <- list(K.girds = tmp, mse.m = tmp, indices = rep( list(list()), length(corGrids) ))
   
   for(i in 1:length(corGrids)){
     for (j in 1:length(matchGrids)){
+      
       this.filename <- paste0("res/", folder, "/rComp_corThr", corGrids[i], "_matchThr", matchGrids[j], ".rda")
+      
       if(!file.exists(this.filename)){
+        
         rcomp <- robustComponents(gfaList_full, corThr=corGrids[i], matchThr=matchGrids[j])
         save(rcomp, file = this.filename)
+        
       }
-      load(paste0("res/", folder, "/rComp_corThr", corGrids[i], "_matchThr", matchGrids[j], ".rda"))
+      else{
+        load(this.filename)
+      }
+      
       match_orig$K.girds[i,j] <- rcomp$Krobust
       match_orig$indices[[i]][[j]] <- rcomp$indices
+      
       if(rcomp$Krobust>0){
+        
+        # rcomp$effect is the component effect in the data space; and array of size NxDxK
+        # rows: observations, columns: variables
+        # the following sums the effects over the first 2 dimensions: N and D. From this we
+        # get expected observations. We can compare this to the true observations to get MSE.
         yhat <- apply(rcomp$effect, 1:2, sum, na.rm=T)
         match_orig$mse.m[i,j] <- mean((yhat - Y)^2)
+        
       }
     }
   }
@@ -268,7 +294,30 @@ load(paste0("res/", folder, "/rComp_corThr0.3_matchThr0.6.rda"))
 rcomp$indices
 ```
 
-### 1.3.2. Using a list of posterior means of reconstructed data
+### 1.3.2. Using a list of posterior means of reconstructed data, lower memory required
+Different method, compare to 1.3.1
+
+Compute factor-specific posterior mean of reconstructed data (X*t(W)).
+Runs pmXW_by_factor() on all replicates then saves the output to "xw_by_rep_comp.rda".
+xw is a list of GFA replicates with posterior medians
+???
+```{r eval = T}
+xw_by_rep_comp.filename <- paste0("res/", folder, "/xw_by_rep_comp.rda")
+if(!file.exists(xw_by_rep_comp.filename)){
+  xw <- list()
+  for(r in 1:R){
+    load(paste0("res/", folder, "/GFA_rep_", r, ".rda"))
+    xw[[r]] <- pmXW_by_factor(res)
+  }
+  
+  # Sort replicates by convergence value
+  rep.use <- sort(rep.summ$conv, index.return=T)
+  
+  # !!! Re-orders replicates but does not save new order in output file!
+  xw <- xw[rep.use$ix[1:10]]
+  save(xw, file = xw_by_rep_comp.filename)
+}
+```
 
 ```{r eval = T}
 load(paste0("res/", folder, "/xw_by_rep_comp.rda"))
@@ -295,6 +344,7 @@ match.mse$K.grid
 
 Both criteria matched 7 factors
 ```{r}
+# optimal # of factors, pick best thresholds
 opt.par <- optimizeK(K.grids=match.mse$K.grid, mse.array=match.mse$mse$all)
 round(opt.par$mse.m, 3)
 paste0("The min. MSE = ", round(opt.par$mse.min, 3))
