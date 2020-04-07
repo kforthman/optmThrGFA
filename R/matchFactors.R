@@ -1,9 +1,9 @@
 #' A function to match factors.
 #'
-#' @param comps No description.
-#' @param maxK No description.
-#' @param corThr No description.
-#' @param matchThr No description.
+#' @param comps A list of GFA replicates with posterior medians.
+#' @param maxK The maximal K among the GFA replicates.
+#' @param corThr Cor threshold defines how close two components are required to be, in terms of correlation, in order to match them.
+#' @param matchThr Match threshold describes the proportion of sampling chains that need to contain a component in order to include it in the robust components.
 #' @export
 #'
 matchFactors <- function(comps, maxK, corThr, matchThr){
