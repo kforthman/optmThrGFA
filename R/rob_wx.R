@@ -31,12 +31,14 @@ rob_wx <- function(models, indices, block.labs, var.labs=NULL){
   # Extract posterior medians and credible intervals for loadings in each replicate
   for (r in 1:n.reps){
     for (k in 1:Krobust){
-      w.ci[w.ci$Replicate==r & w.ci$Component==k, c('Lower', 'Median', 'Upper')] <-
-        sign(indices[r,k]) *
-        do.call(cbind, lapply(models[[r]]$W.Summ, function(x) x[, abs(indices[r,k])]))
-      if(sign(indices[r,k])==-1){
-        w.ci[w.ci$Replicate==r & w.ci$Component==k, c('Lower', 'Upper')] <-
-          w.ci[w.ci$Replicate==r & w.ci$Component==k, c('Upper', 'Lower')]
+      if(!is.na(indices[r,k]) & indices[r,k]!=0){
+        w.ci[w.ci$Replicate==r & w.ci$Component==k, c('Lower', 'Median', 'Upper')] <-
+          sign(indices[r,k]) *
+          do.call(cbind, lapply(models[[r]]$W.Summ, function(x) x[, abs(indices[r,k])]))
+        if(sign(indices[r,k])==-1){
+          w.ci[w.ci$Replicate==r & w.ci$Component==k, c('Lower', 'Upper')] <-
+            w.ci[w.ci$Replicate==r & w.ci$Component==k, c('Upper', 'Lower')]
+        }
       }
     }
   }
