@@ -9,7 +9,13 @@
 rob.var.exp <- function(models, rob, block.names, varIdx.by.block, use.unmatched=F, by.block=T){
   n.reps <- length(models)
   indices <- w.signs(models = models, rob = rob, use.unmatched = use.unmatched)
-  K.rob <- ncol(indices)
+
+  if (use.unmatched){
+    K.rob <- sum(colMeans(indices==0)<1)
+  } else {
+    K.rob <- sum(colMeans(is.na(indices))<1)
+  }
+
   W.p50.rep <- array(NA, dim=c(nrow(models[[1]]$W.Summ$p50), K.rob, n.reps))
   for (r in 1:n.reps){
     idx_vec <- indices[r,]
