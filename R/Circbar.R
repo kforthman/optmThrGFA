@@ -1,5 +1,6 @@
 #' A function to plot the circle plots.
 #'
+#' @export
 
 Circbar <- function(mydata, ebar, graphtitle, textlabel, minx, maxx){
 
