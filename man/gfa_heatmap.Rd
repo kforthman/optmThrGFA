@@ -4,7 +4,7 @@
 \alias{gfa_heatmap}
 \title{GFA Heatmap.}
 \usage{
-gfa_heatmap(robW, block.names, varIdx.by.block, conf.level,
+gfa_heatmap(robW, block.names, varIdx.by.block, conf.level, sparse = F,
   heatmap.rep = FALSE, factor.order = NULL)
 }
 \arguments{
