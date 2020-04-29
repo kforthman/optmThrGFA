@@ -31,7 +31,7 @@ rob_wx <- function(models, indices, block.labs, var.labs=NULL){
   # Extract posterior medians and credible intervals for loadings in each replicate
   for (r in 1:n.reps){
     for (k in 1:Krobust){
-      if(!is.na(indices[r,k]) & indices[r,k]!=0){
+      if(!is.na(indices[r,k]) & indices[r,k]!=0){ ## Henry editted on 2020-03-25 to bypass unmatched factors
         w.ci[w.ci$Replicate==r & w.ci$Component==k, c('Lower', 'Median', 'Upper')] <-
           sign(indices[r,k]) *
           do.call(cbind, lapply(models[[r]]$W.Summ, function(x) x[, abs(indices[r,k])]))
@@ -65,6 +65,7 @@ rob_wx <- function(models, indices, block.labs, var.labs=NULL){
   w.ci.med$all.0 <- (w.ci.med$Lower==0 & w.ci.med$Upper==0)*1
 
   # compute median (across replicates) of poseterior medians if the credible interval excludes 0
+  # w.med <- matrix(w.ci.med$Median, D, Krobust)
   w.med <- matrix(w.ci.med$Median*(1-w.ci.med$contain.0), D, Krobust)
   colnames(w.med) <- 1:Krobust
   rownames(w.med) <- var.labs # rownames(models[[1]]$W)
@@ -72,7 +73,7 @@ rob_wx <- function(models, indices, block.labs, var.labs=NULL){
   # compute the medians (across replicates) of posterior medians of factor scores
   x.rep <- array(NA, dim=c(N, Krobust, n.reps))
   for (r in 1:n.reps){
-    x.rep[,,r] <- models[[r]]$X.Summ$p50[, abs(indices[r,])]
+    x.rep[,,r][,indices[r,]!=0 & !is.na(indices[r,])] <- models[[r]]$X.Summ$p50[, abs(indices[r,])]
     x.rep[,,r] <- sweep(x.rep[,,r], MARGIN=2, sign(indices[r,]), '*')
   }
   x.rob <- apply(x.rep, 1:2, median, na.rm=T)
