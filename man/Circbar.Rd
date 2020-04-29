@@ -6,6 +6,19 @@
 \usage{
 Circbar(mydata, ebar, graphtitle, textlabel, minx, maxx)
 }
+\arguments{
+\item{mydata}{No description.}
+
+\item{ebar}{No description.}
+
+\item{graphtitle}{No description.}
+
+\item{textlabel}{No description.}
+
+\item{minx}{No description.}
+
+\item{maxx}{No description.}
+}
 \description{
 A function to plot the circle plots.
 }
