@@ -36,7 +36,7 @@ gfa_heatmap <- function(robW, block.names, varIdx.by.block, conf.level,
   }
   # print('Robust heat map')
   if(!is.null(factor.order)){
-    w.plot(robW$w.med[, factor.order], D=nrow(robW$w.med), K=ncol(robW$w.med), gr1, conf.level, replicate=NULL)
+    w.plot(robW$w.med[, factor.order], D=nrow(robW$w.med), K=length(factor.order), gr1, conf.level, replicate=NULL)
   } else {
     w.plot(robW$w.med, D=nrow(robW$w.med), K=ncol(robW$w.med), gr1, conf.level, replicate=NULL)
   }
