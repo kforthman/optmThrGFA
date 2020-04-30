@@ -12,7 +12,7 @@ w.signs <- function(models, rob, use.unmatched=F){
   }
   n.reps <- length(models)
   maxK <- ncol(indices)
-  ref.rep <- which.min(apply(rob$indices<0, 1, sum))[1]
+  ref.rep <- which.max(apply(rob$indices>0, 1, sum))[1]
   rep.ind <- c(1:n.reps)[-ref.rep]
   for (r in rep.ind){
     sign.tmp <- diag(sign(cor(models[[ref.rep]]$W.Summ$p50[, indices[ref.rep,]],

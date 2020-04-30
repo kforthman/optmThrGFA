@@ -21,6 +21,7 @@ data.simu <- function(N, W_DxK, varIdx.by.block, sd.noise){
     X[, k] <- rnorm(N) ## each factor (column) has a mean closer to 0
   }
   colnames(X) <- paste0("K", 1:K)
+  X <- scale(X)
   Y <- X %*% t(W_DxK) + sd.noise*matrix(rnorm(N*D), N, D)
   colnames(Y) <- paste0("V", 1:D)
   Y.list <- list()

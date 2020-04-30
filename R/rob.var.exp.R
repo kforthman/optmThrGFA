@@ -6,9 +6,9 @@
 #' @inheritParams w.signs
 #' @export
 
-rob.var.exp <- function(models, rob, block.names, varIdx.by.block, use.unmatched=F, by.block=T){
+rob.var.exp <- function(models, indices, block.names, varIdx.by.block, use.unmatched=F, by.block=T){
   n.reps <- length(models)
-  indices <- w.signs(models = models, rob = rob, use.unmatched = use.unmatched)
+  indices <- w.signs(models, indices, use.unmatched)
 
   if (use.unmatched){
     K.rob <- sum(colMeans(indices==0)<1)
@@ -19,10 +19,15 @@ rob.var.exp <- function(models, rob, block.names, varIdx.by.block, use.unmatched
   W.p50.rep <- array(NA, dim=c(nrow(models[[1]]$W.Summ$p50), K.rob, n.reps))
   for (r in 1:n.reps){
     idx_vec <- indices[r,]
+    if(use.unmatched){
+      idx_vec <- idx_vec[idx_vec!=0]
+    }else{
+      idx_vec <- idx_vec[!is.na(idx_vec)]
+    }
     if (length(idx_vec)==1){
       W.p50.rep[,,r] <- sign(idx_vec)*models[[r]]$W.Summ$p50[, abs(idx_vec)]
     } else {
-      W.p50.rep[,,r] <- sweep(models[[r]]$W.Summ$p50[, abs(idx_vec)],
+      W.p50.rep[,,r][, 1:length(idx_vec)] <- sweep(models[[r]]$W.Summ$p50[, abs(idx_vec)],
                               MARGIN=2, sign(idx_vec), '*')
     }
   }

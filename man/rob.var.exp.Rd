@@ -4,13 +4,11 @@
 \alias{rob.var.exp}
 \title{A function to compute \% variance explained}
 \usage{
-rob.var.exp(models, rob, block.names, varIdx.by.block, use.unmatched = F,
-  by.block = T)
+rob.var.exp(models, indices, block.names, varIdx.by.block,
+  use.unmatched = F, by.block = T)
 }
 \arguments{
 \item{models}{No description.}
-
-\item{rob}{No description.}
 
 \item{block.names}{No description.}
 

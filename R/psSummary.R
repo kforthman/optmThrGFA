@@ -16,6 +16,7 @@ psSummary <- function(gfa.res, credible.lv){
   # dimensions = 3 (quantiles) x D x K
   tmp <- apply(gfa.res$posterior$W, 2:3, function(x) quantile(x, p.vec) )
   gfa.res$W.Summ <- list(lo=tmp[1,,], p50=tmp[2,,], hi=tmp[3,,])
+  rownames(gfa.res$W.Summ$lo) <- rownames(gfa.res$W.Summ$p50) <- rownames(gfa.res$W.Summ$hi) <- rownames(gfa.res$W)
   # dimensions = 3 (quantiles) x N x K
   tmp <- apply(gfa.res$posterior$X, 2:3, function(x) quantile(x, p.vec) )
   gfa.res$X.Summ <- list(lo=tmp[1,,], p50=tmp[2,,], hi=tmp[3,,])
