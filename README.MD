@@ -25,3 +25,9 @@ devtools::install_github("kforthman/optmThrGFA")
 # This step is only to check the package installed correctly:
 library(optmThrGFA)
 ```
+
+If you have trouble installing any dependencies on the server, you may need to install an earlier version of the package that works with R 3.5.1. You may do this using the R code below
+```
+library(devtools)
+devtools::install_version("package_name", version = "package_version")
+```
