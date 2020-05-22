@@ -55,10 +55,10 @@ w.plot <- function(w, D, K, gr1, conf.level, replicate){
   for(i in 1:length(mu)) {
     if (K ==1){
       if(i!=length(mu)) lines(rep(gr1[i+1]-0.5,2)/D, c(-1, 1.05), lwd=2)
-      text(mu[i]/D,1.065,names(gr1)[i])
+      text(mu[i]/D,1.065,names(gr1)[i], srt = 15)
     } else {
       if(i!=length(mu)) lines(rep(gr1[i+1]+1/2,2), c(.5, N*1.03+.5), lwd=2)
-      text(mu[i],N*1.03+.5,names(gr1)[i])
+      text(mu[i],N*1.03+.5,names(gr1)[i], srt = 15)
     }
   }
   #Colorbar

@@ -7,21 +7,30 @@
 #' @export
 
 rob_wx <- function(models, indices, block.labs, var.labs=NULL){
-  N <- nrow(models[[1]]$X.Summ$p50)
+  # adding as.matrix() to lines below to prevent breaking when Krobust == 1
+  N <- nrow(as.matrix(models[[1]]$X.Summ$p50))
   if("W.Summ" %in% names(models[[1]])){
-    D <- nrow(models[[1]]$W.Summ$p50)
+    D <- nrow(as.matrix(models[[1]]$W.Summ$p50))
   } else if ("W" %in% names(models[[1]])){
-    D <- nrow(models[[1]]$W)
+    D <- nrow(as.matrix(models[[1]]$W))
   }
   n.reps <- length(models)
   Krobust <- ncol(indices)
 
   # create a dataframe to store credible intervals of loadings across replicates
   # Henry edited on 2018-12-12: Add block names and preferred variable names
-  df.base <- data.frame(Block=block.labs,
-                        Variable=rownames(models[[1]]$W.Summ$p50),
-                        var.lab=var.labs,
-                        var.order=as.numeric(1:length(var.labs)))
+  # hack to deal with Krobust == 1
+  if (Krobust > 1) {
+    df.base <- data.frame(Block=block.labs,
+                          Variable=rownames(models[[1]]$W.Summ$p50),
+                          var.lab=var.labs,
+                          var.order=as.numeric(1:length(var.labs)))
+  } else {
+    df.base <- data.frame(Block=block.labs,
+                          Variable=names(models[[1]]$W.Summ$p50),
+                          var.lab=var.labs,
+                          var.order=as.numeric(1:length(var.labs)))
+  }
   w.ci <- df.base[rep(seq_len(nrow(df.base)), n.reps*Krobust),]
   w.ci$Replicate <- rep(1:n.reps, each=D*Krobust)
   w.ci$Component <- rep(rep(1:Krobust, each=D), n.reps)
@@ -31,11 +40,21 @@ rob_wx <- function(models, indices, block.labs, var.labs=NULL){
   # Extract posterior medians and credible intervals for loadings in each replicate
   for (r in 1:n.reps){
     for (k in 1:Krobust){
-      if(!is.na(indices[r,k]) & indices[r,k]!=0){ ## Henry editted on 2020-03-25 to bypass unmatched factors
-        w.ci[w.ci$Replicate==r & w.ci$Component==k, c('Lower', 'Median', 'Upper')] <-
-          sign(indices[r,k]) *
-          do.call(cbind, lapply(models[[r]]$W.Summ, function(x) x[, abs(indices[r,k])]))
-        if(sign(indices[r,k])==-1){
+      # hack to deal with Krobust == 1
+      if (!is.na(indices[r,k]) & indices[r,k] != 0) {
+
+        if (Krobust > 1) {
+          w.ci[w.ci$Replicate==r & w.ci$Component==k, c('Lower', 'Median', 'Upper')] <-
+            sign(indices[r,k]) *
+            do.call(cbind, lapply(models[[r]]$W.Summ, function(x) x[, abs(indices[r,k])]))
+        } else {
+          w.ci[w.ci$Replicate==r & w.ci$Component==k, c('Lower', 'Median', 'Upper')] <-
+            sign(indices[r,k]) *
+            do.call(cbind, models[[r]]$W.Summ)
+        }
+      }
+      if (!is.na(indices[r,k]) & indices[r,k] != 0){ # hack to deal with NA values in "indices"
+        if (sign(indices[r,k])==-1) {
           w.ci[w.ci$Replicate==r & w.ci$Component==k, c('Lower', 'Upper')] <-
             w.ci[w.ci$Replicate==r & w.ci$Component==k, c('Upper', 'Lower')]
         }
@@ -73,8 +92,16 @@ rob_wx <- function(models, indices, block.labs, var.labs=NULL){
   # compute the medians (across replicates) of posterior medians of factor scores
   x.rep <- array(NA, dim=c(N, Krobust, n.reps))
   for (r in 1:n.reps){
-    x.rep[,,r][,indices[r,]!=0 & !is.na(indices[r,])] <- models[[r]]$X.Summ$p50[, abs(indices[r,])]
-    x.rep[,,r] <- sweep(x.rep[,,r], MARGIN=2, sign(indices[r,]), '*')
+    # hack to deal with Krobust == 1
+    indDummy = which(!is.na(abs(indices[r,])));
+
+    if (Krobust > 1) {
+      x.rep[,which(abs(indices[r,]) != 0),r] <- models[[r]]$X.Summ$p50[, abs(indices[r,indDummy])]
+    } else {
+      dummy = as.matrix(models[[r]]$X.Summ$p50);
+      x.rep[,which(abs(indices[r,]) != 0),r] <- dummy[, abs(indices[r,indDummy])]
+    }
+    x.rep[,,r] <- sweep(as.matrix(x.rep[,,r]), MARGIN=2, sign(indices[r,]), '*') #added the as.matrix() operation to deal with Krobust == 1
   }
   x.rob <- apply(x.rep, 1:2, median, na.rm=T)
   colnames(x.rob) <- paste0('K', 1:Krobust)

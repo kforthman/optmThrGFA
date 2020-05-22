@@ -38,6 +38,16 @@ gfa_heatmap <- function(robW, block.names, varIdx.by.block, conf.level,
   if(!is.null(factor.order)){
     w.plot(robW$w.med[, factor.order], D=nrow(robW$w.med), K=length(factor.order), gr1, conf.level, replicate=NULL)
   } else {
+
+    dummy <- robW$w.med
+    rowCounter <- 1
+    for (LIST in 1:length(gr)) {
+      for (VAR in 1:length(gr[[LIST]])) {
+        rownames(dummy)[rowCounter] <- gr[[LIST]][VAR]
+        rowCounter = rowCounter + 1;
+      }
+    }
+
     w.plot(robW$w.med, D=nrow(robW$w.med), K=ncol(robW$w.med), gr1, conf.level, replicate=NULL)
   }
 }
