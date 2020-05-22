@@ -84,8 +84,7 @@ rob_wx <- function(models, indices, block.labs, var.labs=NULL){
   w.ci.med$all.0 <- (w.ci.med$Lower==0 & w.ci.med$Upper==0)*1
 
   # compute median (across replicates) of poseterior medians if the credible interval excludes 0
-  # w.med <- matrix(w.ci.med$Median, D, Krobust)
-  w.med <- matrix(w.ci.med$Median*(1-w.ci.med$contain.0), D, Krobust)
+  w.med <- matrix(w.ci.med$Median, D, Krobust)
   colnames(w.med) <- 1:Krobust
   rownames(w.med) <- var.labs # rownames(models[[1]]$W)
 

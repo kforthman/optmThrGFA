@@ -4,14 +4,14 @@
 \alias{MSE.Grids}
 \title{A function to compute MSE of the GFA given robust components thresholds.}
 \usage{
-MSE.Grids(Ymtx, maxK, comps, corGrids, matchGrids)
+MSE.Grids(Ymtx, comps, match.res, corGrids, matchGrids)
 }
 \arguments{
 \item{Ymtx}{The set of observed data as an NxD matrix.}
 
-\item{maxK}{The maximal K among the GFA replicates.}
-
 \item{comps}{A list of GFA replicates with posterior medians.}
+
+\item{match.res}{No description.}
 
 \item{corGrids}{is a vector of cor thresholds to be tested. Cor threshold defines how close two components are required to be, in terms of correlation, in order to match them.}
 
