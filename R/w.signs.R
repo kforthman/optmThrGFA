@@ -18,7 +18,7 @@ w.signs <- function(models, rob, use.unmatched=F){
   rep.ind <- c(1:n.reps)[-ref.rep]
   for (r in rep.ind){
     # hack for dealing with K.rob == 1, in which case models[[ref.rep]]$W.Summ$p50 only has one row
-    if (!is.null(dim(a))) { #if more than 1 robust factor
+    if (nrow(models[[ref.rep]]$W.Summ$p50) > 1) { #if more than 1 robust factor
       sign.tmp <- diag(sign(cor(models[[ref.rep]]$W.Summ$p50[, indices[ref.rep,]],
                                 models[[r]]$W.Summ$p50[, indices[r,]])))
     } else { #if only 1 robust factor
