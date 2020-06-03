@@ -1,9 +1,9 @@
 Package: optmThrGFA
 Title: Optimize Thresholds for GFA.
-Version: 0.0.0.9000
+Version: 0.0.1.0
 Authors@R: c(person("Katie", "Forthman", email = "kclary@laureateinstitute.org", role = c("aut", "cre")), person("Hung-wen", "Yeh", email = "hyeh@laureateinstitute.org", role = c("aut")))
 Description: Optimizes parameters for GFA.
-Depends: R (>= 3.5.1), GFA (>= 1.0.3), gplots (>= 3.0.3), ggplot2 (>= 3.2.1), foreach (>= 1.4.7), DMwR (>= 0.4.1), doParallel (>= 1.0.15)
+Depends: R (>= 4.0.0), GFA (>= 1.0.3), gplots (>= 3.0.3), ggplot2 (>= 3.3.1), foreach (>= 1.5.0), DMwR (>= 0.4.1), doParallel (>= 1.0.15)
 License: None
 Encoding: UTF-8
 LazyData: true
