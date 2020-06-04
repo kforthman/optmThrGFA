@@ -42,4 +42,6 @@ It is highly recommended that you run this script on submit0. It will run much f
     
 Pro tip: you can monitor progress in the terminal using the command
 
-    `watch tail out.log -n 50`
+```
+watch tail out.log -n 50
+```
