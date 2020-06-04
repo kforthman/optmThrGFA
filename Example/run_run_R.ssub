@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+#SBATCH --partition=c2_cpu
+#SBATCH --ntasks=10
+#SBATCH --mem=30000
+#SBATCH --output=__________/out.log
+#SBATCH --error=__________/err.log
+#SBATCH --job-name=GFA
+#SBATCH --mail-type=NONE
+#SBATCH --workdir=__________ 
+#SBATCH --time=3-0
+#
+#################################################
+#to submit this to the scheduler, run:
+#sbatch < run_run_R.ssub
+#
+# *To fill in the blanks:*
+# 'workdir' should be set to the path where you saved this script.
+# 'output' and 'error' are set to text files where the output from this script will be written. The output and error logs can be saved to any directory, but it's best to save it in the same folder as this script.
+
+
+#to run an interactive terminal
+#srun -N 1 -c 4 --mem=24000 --pty --partition=c2_short /bin/bash
+
+module load R/4.0.0
+module load pandoc
+#this should go in your .bashrc file too, so R libraries installed for this version of R go in their own folder
+R_LIBS_USER=~/R/4.0.0
+export R_LIBS_USER
+
+./xvfb-run-safe -s '-br -extension Composite -screen 0 1000x1000x24' ./run_R.Rscript 
