@@ -1,30 +1,52 @@
 Optimization of threshold parameters for GFA replicates
 
-### Installation
-To install in R:
+# Example Script
 
+The example script "run_optmThrGFA.R" was created so that you can get the package optmThrGFA up and running quickly and painlessly! Please keep in mind that you can make edits to the code in this script for your own project as you see fit. Please read through the comments for various tips and suggestions.
+
+## Before running this script...
+
+1. Create a new folder for your project. Save this script and the .Rmd file to that folder.
+2. Format your raw data.
+    Your raw data is expected as an R data.frame object named "MYdf". You need to save this object as a .RData file. If your data is in the form of a .csv, you will need to load it into R and format it this way yourself. Remove any columns that are not predictors (i.e. ID or session). Commented below is an example of how you might do that. You only need to do this once, so do not put the following code into your main script.
+    
 ```
-install.packages("devtools")
-devtools::install_github("kforthman/optmThrGFA")
-library(optmThrGFA)
+data <- read.csv("mydata.csv")
+data.df <- as.data.frame(data)
+MYdf <- data.df[!(names(data.df) %in% c("ID", "session"))]
+save(MYdf, file = "mydata.RData")
 ```
 
-To install on the server:
+3. Create a folder in your project directory named 'Data'. Move the .RData file containing your formatted raw data into this folder.
+4. Create a csv file containing block assignments for each variable. Name the first column 'block' and the second column 'variable'. Name the file "var_blocks.csv". An example is in the repository in the Example directory. Place this file in you project directory.
+5. Fill in the blanks in the example script marked by '__________'
+6. Save the example bash scripts named 'run_R.ssub', 'run_run_R.ssub', 'xvfb-run-safe' to your project folder. Fill in the blanks in the bash script 'run_run_R.ssub'.
 
-```
-# first, log onto the server through the terminal
-ssh submit0
-# (type your password and hit 'enter')
-module load R
-R
-install.packages('devtools')
-# You may need to select a mirror. I tend to use the one for Kansas. Type the number and press 'enter'.
-# Once you select your mirror, it may take a couple of minutes to look like it's doing anything,
-# so just be patient.
-devtools::install_github("kforthman/optmThrGFA")
-# This step is only to check the package installed correctly:
-library(optmThrGFA)
-```
+## Running this script...
+
+It is highly recommended that you run this script on submit0. It will run much faster and not take up resources on your local computer. The files 'run_R.ssub', 'run_run_R.ssub', and 'xvfb-run-safe' are provided in this example for running this script on the server. To run the job,
+
+1. Open the terminal.
+2. Start submit0 by executing the command
+
+    `ssh submit0`
+    
+    Type in your password.
+3. cd into the directory where this script is located.
+
+    `cd /your/project/directory`
+    
+4. Run the job.
+
+    `sbatch < run_run_R.ssub`
+    
+Pro tip: you can monitor progress in the terminal using the command
+    `watch tail out.log -n 50`
+
+
+
+
+## Note
 
 If you have trouble installing any dependencies on the server, you may need to install an earlier version of the package that works with R 3.5.1. You may do this using the R code below
 ```
