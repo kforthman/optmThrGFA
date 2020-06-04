@@ -41,15 +41,5 @@ It is highly recommended that you run this script on submit0. It will run much f
     `sbatch < run_run_R.ssub`
     
 Pro tip: you can monitor progress in the terminal using the command
+
     `watch tail out.log -n 50`
-
-
-
-
-## Note
-
-If you have trouble installing any dependencies on the server, you may need to install an earlier version of the package that works with R 3.5.1. You may do this using the R code below
-```
-library(devtools)
-devtools::install_version("package_name", version = "package_version")
-```
