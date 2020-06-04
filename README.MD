@@ -4,6 +4,11 @@ Optimization of threshold parameters for GFA replicates
 
 The example script "run_optmThrGFA.R" was created so that you can get the package optmThrGFA up and running quickly and painlessly! Please keep in mind that you can make edits to the code in this script for your own project as you see fit. Please read through the comments for various tips and suggestions.
 
+## To download the Example files...
+Open the terminal and cd to the directory where you would like to save the example files. Then execute the command
+
+`svn export https://github.com/kforthman/optmThrGFA/trunk/Example`
+
 ## Before running this script...
 
 1. Create a new folder for your project. Save this script and the .Rmd file to that folder.
@@ -42,6 +47,4 @@ It is highly recommended that you run this script on submit0. It will run much f
     
 Pro tip: you can monitor progress in the terminal using the command
 
-```
-watch tail out.log -n 50
-```
+`watch tail out.log -n 50`
