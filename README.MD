@@ -25,11 +25,11 @@ save(MYdf, file = "mydata.RData")
 3. Create a folder in your project directory named 'Data'. Move the .RData file containing your formatted raw data into this folder.
 4. Create a csv file containing block assignments for each variable. Name the first column 'block' and the second column 'variable'. Name the file "var_blocks.csv". An example is in the repository in the Example directory. Place this file in you project directory.
 5. Fill in the blanks in the example script marked by '__________'
-6. Save the example bash scripts named 'run_R.ssub', 'run_run_R.ssub', 'xvfb-run-safe' to your project folder. Fill in the blanks in the bash script 'run_run_R.ssub'.
+6. Save the example bash scripts named 'run_R.Rscript', 'run_run_R.ssub', 'xvfb-run-safe' to your project folder. Fill in the blanks in the bash script 'run_run_R.ssub'.
 
 ## Running this script...
 
-It is highly recommended that you run this script on submit0. It will run much faster and not take up resources on your local computer. The files 'run_R.ssub', 'run_run_R.ssub', and 'xvfb-run-safe' are provided in this example for running this script on the server. To run the job,
+It is highly recommended that you run this script on submit0. It will run much faster and not take up resources on your local computer. The files 'run_R.Rscript', 'run_run_R.ssub', and 'xvfb-run-safe' are provided in this example for running this script on the server. To run the job,
 
 1. Open the terminal.
 2. Start submit0 by executing the command
