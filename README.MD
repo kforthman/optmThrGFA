@@ -23,7 +23,7 @@ save(MYdf, file = "mydata.RData")
 ```
 
 3. Create a folder in your project directory named 'Data'. Move the .RData file containing your formatted raw data into this folder.
-4. Create a csv file containing block assignments for each variable. Name the first column 'block' and the second column 'variable'. Name the file "var_blocks.csv". An example is in the repository in the Example directory. Place this file in you project directory.
+4. Create a csv file containing block assignments for each variable. Name the first column 'block' and the second column 'variable'. Name the file "var_blocks.csv". You can name the blocks however you like, just don't use any special characters or spaces in the block names. In the variable column, make sure the variable names match the column names in your raw dataframe. An example is in the repository in the Example directory. Place this file in you project directory.
 5. Fill in the blanks in the example script marked by '__________'
 6. Save the example bash scripts named 'run_R.Rscript', 'run_run_R.ssub', 'xvfb-run-safe' to your project folder. Fill in the blanks in the bash script 'run_run_R.ssub'.
 
