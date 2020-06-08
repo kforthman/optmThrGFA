@@ -21,6 +21,11 @@ optParams
 ```
 
 ```{r}
+message("The chosen cor threshold is: ", opt.cor, ".")
+message("The chosen match threshold is: ", opt.match, ".")
+```
+
+```{r}
 ve.summ <- varexp$ve.summ
 ve.summ <- ve.summ[order(ve.summ$Component),]
 ggplot(ve.summ, aes(x=1:nrow(ve.summ), y=Mean, ymin=Mean-SE, ymax=Mean+SE)) + 

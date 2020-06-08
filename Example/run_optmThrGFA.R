@@ -277,9 +277,10 @@ message(tmp.filename)
 opt.par <- optimizeK(K.grids=match.mse$K.grid, mse.array=match.mse$mse$all)
 save(opt.par, file = tmp.filename)
 
-opt.cor <- opt.par$par.1se[1, "opt.corThr"]
-opt.match <- opt.par$par.1se[1, "opt.matchThr"]
-opt.K <- opt.par$par.1se[1, "optK"]
+last.idx <- dim(opt.par$par.1se)[1]
+opt.cor <- opt.par$par.1se[last.idx, "opt.corThr"]
+opt.match <- opt.par$par.1se[last.idx, "opt.matchThr"]
+opt.K <- opt.par$par.1se[last.idx, "optK"]
 opt.cor.idx <- which(corGrids == opt.cor)
 opt.match.idx <- which(matchGrids == opt.match)
 
@@ -297,7 +298,7 @@ save(optParams, file = optParams.filename)
 varexp.filename <- paste0(folder_res, "/varexp.rda")
 message(varexp.filename)
 
-rob.ind <- list(indices=match.xw$corThr_0.1$matchThr_0.5$indices) 
+rob.ind <- list(indices=match.xw[[opt.cor.idx]][[opt.match.idx]]$indices)
 varexp <- rob.var.exp(models=gfaList_p50,
                       indices=rob.ind,
                       block.names=block.names,
