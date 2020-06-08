@@ -1,6 +1,6 @@
 ---
 title: "Robust GFA simulation"
-author: "Katie Forthman"
+author: "`r Sys.info()[['user']]`"
 date: "`r date()`"
 output: pdf_document
 ---
