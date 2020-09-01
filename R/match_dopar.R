@@ -19,6 +19,7 @@ match_dopar <- function(comps, corGrids, matchGrids) {
       tmp <- matchFactors(comps, maxK=maxK, corThr=corGrids[i], matchThr=matchGrids[j])
       print(paste0("Elapsed time for (corThr, matchThr) = (", corGrids[i], ", ", matchGrids[j], ") is ",
                    round(tmp$elapsed.time/60, 1), " minutes"))
+      if(is.null(tmp)){stop(paste0("matchFactors() at the threshold (corThr, matchThr) = (", corGrids[i], ", ", matchGrids[j], ") returned NULL."))}
       return(tmp)
     }
   names(rob) <- paste0("corThr_", corGrids)
