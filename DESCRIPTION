@@ -3,7 +3,7 @@ Title: Optimize Thresholds for GFA.
 Version: 0.0.1.0
 Authors@R: c(person("Katie", "Forthman", email = "kclary@laureateinstitute.org", role = c("aut", "cre")), person("Hung-wen", "Yeh", email = "hyeh@laureateinstitute.org", role = c("aut")))
 Description: Optimizes parameters for GFA.
-Depends: R (>= 4.0.0), GFA (>= 1.0.3), gplots (>= 3.0.3), ggplot2 (>= 3.3.1), foreach (>= 1.5.0), DMwR (>= 0.4.1), doParallel (>= 1.0.15), dplyr (>= 1.0.0)
+Depends: R (>= 4.0.0), GFA (>= 1.0.3), gplots (>= 3.0.3), ggplot2 (>= 3.3.1), foreach (>= 1.5.0), DMwR2 (>= 0.0.2), doParallel (>= 1.0.15), dplyr (>= 1.0.0)
 License: None
 Encoding: UTF-8
 LazyData: true
